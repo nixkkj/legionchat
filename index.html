@@ -35,22 +35,20 @@ color:white;
 }
 
 .btn{
-width:100%;
-padding:12px;
+padding:10px 14px;
 border:none;
 border-radius:10px;
 background:linear-gradient(135deg,#7b00ff,#c000ff);
 color:white;
 cursor:pointer;
-margin-top:10px;
 font-weight:bold;
 }
 
 .main{
-display:flex;
-gap:20px;
-width:1100px;
+display:none;
+width:1200px;
 height:80vh;
+gap:20px;
 }
 
 .chat{
@@ -64,7 +62,6 @@ border-radius:20px;
 .header{
 background:linear-gradient(90deg,#6a00ff,#9d00ff);
 padding:10px;
-text-align:center;
 border-radius:20px 20px 0 0;
 display:flex;
 justify-content:space-between;
@@ -73,29 +70,49 @@ align-items:center;
 
 .chat-box{
 flex:1;
+overflow-y:auto;
 padding:15px;
 display:flex;
 flex-direction:column;
 gap:10px;
-overflow-y:auto;
 }
 
 .message{
-max-width:65%;
+max-width:70%;
 padding:10px;
 border-radius:15px;
+position:relative;
 font-size:14px;
-word-break:break-word;
 }
 
 .sent{
 align-self:flex-end;
 background:linear-gradient(135deg,#7b00ff,#c000ff);
+border-bottom-right-radius:5px;
+}
+
+.sent::after{
+content:"";
+position:absolute;
+right:-6px;
+bottom:0;
+border-left:6px solid #c000ff;
+border-top:6px solid transparent;
 }
 
 .received{
 align-self:flex-start;
 background:#2a2a2a;
+border-bottom-left-radius:5px;
+}
+
+.received::after{
+content:"";
+position:absolute;
+left:-6px;
+bottom:0;
+border-right:6px solid #2a2a2a;
+border-top:6px solid transparent;
 }
 
 .input{
@@ -113,10 +130,10 @@ color:white;
 }
 
 .side{
-width:250px;
+width:260px;
 display:flex;
 flex-direction:column;
-gap:20px;
+gap:15px;
 }
 
 .box{
@@ -124,12 +141,12 @@ background:rgba(20,0,40,0.9);
 border-radius:20px;
 display:flex;
 flex-direction:column;
-height:calc(50% - 10px);
+height:33%;
 }
 
 .box-header{
 background:linear-gradient(90deg,#6a00ff,#9d00ff);
-padding:10px;
+padding:8px;
 text-align:center;
 border-radius:20px 20px 0 0;
 }
@@ -137,22 +154,35 @@ border-radius:20px 20px 0 0;
 .box-content{
 flex:1;
 overflow-y:auto;
-padding:10px;
+padding:8px;
 }
 
 .item{
 background:rgba(30,0,50,0.5);
-padding:8px;
-border-radius:10px;
+padding:6px;
+border-radius:8px;
 margin-bottom:5px;
 font-size:13px;
+}
+
+.status-dot{
+width:8px;height:8px;border-radius:50%;
+display:inline-block;margin-right:6px;
+}
+.online{background:#00ff88;}
+.afk{background:gray;}
+
+.typing{
+font-size:12px;
+opacity:0.7;
+margin-top:5px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="loginScreen" class="login">
+<div class="login" id="loginScreen">
 <h2>Login</h2>
 <input id="user" placeholder="Usuário">
 <input id="pass" type="password" placeholder="Senha">
@@ -160,22 +190,23 @@ font-size:13px;
 <button class="btn" onclick="register()">Criar Conta</button>
 </div>
 
-<div id="app" class="main hidden">
+<div class="main" id="main">
 
 <div class="chat">
 <div class="header">
 <span id="username">Chat</span>
 <div style="display:flex;gap:10px;">
-<button class="btn" style="width:auto;padding:6px 10px;" onclick="goAdmin()">Admin</button>
-<button class="btn" style="width:auto;padding:6px 10px;" onclick="logout()">Sair</button>
+<button class="btn" onclick="goAdmin()">Admin</button>
+<button class="btn" onclick="logout()">Sair</button>
 </div>
 </div>
 
 <div id="chatBox" class="chat-box"></div>
+<div id="typing" class="typing"></div>
 
 <div class="input">
 <input id="msg" placeholder="Digite uma mensagem...">
-<button class="btn" style="width:auto" onclick="send()">Enviar</button>
+<button class="btn" onclick="send()">Enviar</button>
 </div>
 </div>
 
@@ -189,6 +220,11 @@ font-size:13px;
 <div class="box">
 <div class="box-header">Update Logs</div>
 <div id="logsList" class="box-content"></div>
+</div>
+
+<div class="box">
+<div class="box-header">Legion - Discord</div>
+<div id="discordList" class="box-content"></div>
 </div>
 
 </div>
@@ -214,14 +250,16 @@ const db=firebase.firestore();
 const auth=firebase.auth();
 
 let username="";
+let typingTimeout;
 
 function showApp(){
-document.getElementById("loginScreen").classList.add("hidden");
-document.getElementById("app").classList.remove("hidden");
-document.getElementById("username").innerText=username;
+loginScreen.style.display="none";
+main.style.display="flex";
 loadChat();
 loadUsers();
 loadLogs();
+loadDiscord();
+monitorTyping();
 }
 
 function register(){
@@ -244,6 +282,7 @@ auth.signInWithEmailAndPassword(u+"@x.com",p)
 .then(r=>{
 db.collection("users").doc(r.user.uid).get().then(doc=>{
 username=doc.data().username;
+document.getElementById("username").innerText=username;
 showApp();
 });
 });
@@ -292,7 +331,7 @@ s.forEach(d=>{
 let u=d.data();
 let div=document.createElement("div");
 div.className="item";
-div.innerText=u.username+" - "+u.status;
+div.innerHTML=`<span class="status-dot ${u.status}"></span>${u.username}`;
 usersList.appendChild(div);
 });
 });
@@ -310,6 +349,55 @@ logsList.appendChild(div);
 });
 });
 }
+
+function loadDiscord(){
+db.collection("users").onSnapshot(s=>{
+discordList.innerHTML="<b>Online</b>";
+let afk="<br><b>AFK</b>";
+
+s.forEach(d=>{
+let u=d.data();
+if(u.status==="online"){
+discordList.innerHTML+=`<div class="item">${u.username}</div>`;
+}else{
+afk+=`<div class="item">${u.username}</div>`;
+}
+});
+
+discordList.innerHTML+=afk;
+});
+}
+
+msg.addEventListener("input",()=>{
+if(!auth.currentUser)return;
+
+db.collection("typing").doc(auth.currentUser.uid).set({
+user:username
+});
+
+clearTimeout(typingTimeout);
+typingTimeout=setTimeout(()=>{
+db.collection("typing").doc(auth.currentUser.uid).delete();
+},1500);
+});
+
+function monitorTyping(){
+db.collection("typing").onSnapshot(s=>{
+typing.innerText="";
+s.forEach(d=>{
+let t=d.data();
+if(t.user!==username){
+typing.innerText=t.user+" está digitando...";
+}
+});
+});
+}
+
+window.addEventListener("beforeunload",()=>{
+if(auth.currentUser){
+db.collection("users").doc(auth.currentUser.uid).update({status:"afk"});
+}
+});
 </script>
 
 </body>
