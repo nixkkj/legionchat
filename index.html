@@ -15,7 +15,7 @@ body{height:100vh;background:linear-gradient(135deg,#0a0a0f,#1a0033);display:fle
 @keyframes fadeInOut{0%{opacity:0;transform:translateX(-50%) translateY(-20px);}10%{opacity:1;transform:translateX(-50%) translateY(0);}90%{opacity:1;transform:translateX(-50%) translateY(0);}100%{opacity:0;transform:translateX(-50%) translateY(-20px);}}
 .side-panel{width:200px;background:rgba(0,0,0,0.3);color:white;padding:10px;display:flex;flex-direction:column;}
 .chat-wrapper{flex:1;display:flex;flex-direction:column;}
-.chat-header{padding:15px;text-align:center;color:#fff;background:linear-gradient(90deg,#6a00ff,#9d00ff);}
+.chat-header{padding:15px;text-align:center;color:#fff;background:linear-gradient(90deg,#6a00ff,#9d00ff);display:flex;justify-content:space-between;align-items:center;}
 .chat-box{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
 .chat-box::-webkit-scrollbar{width:8px;}
 .chat-box::-webkit-scrollbar-track{background:transparent;}
@@ -29,6 +29,7 @@ body{height:100vh;background:linear-gradient(135deg,#0a0a0f,#1a0033);display:fle
 .status-label{font-size:12px;color:#aaa;margin-bottom:5px;}
 .user-item{padding:5px;border-radius:5px;margin:2px 0;background:rgba(255,255,255,0.1);display:flex;justify-content:space-between;}
 .afk{opacity:0.5;}
+.logout-btn{padding:5px 10px;border:none;border-radius:5px;background:#c00000;color:white;cursor:pointer;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 </style>
 </head>
@@ -58,7 +59,10 @@ body{height:100vh;background:linear-gradient(135deg,#0a0a0f,#1a0033);display:fle
     <div id="userList"></div>
   </div>
   <div class="chat-wrapper">
-    <div class="chat-header" id="header">Chat</div>
+    <div class="chat-header" id="header">
+      <span>Chat</span>
+      <button class="logout-btn" id="logoutBtn">Sair</button>
+    </div>
     <div class="status-label" id="typingStatus"></div>
     <div class="chat-box" id="chatBox"></div>
     <div class="chat-input">
@@ -86,7 +90,6 @@ const db = firebase.firestore();
 
 let username = "";
 let room = "general";
-let afkTimeout;
 
 function showToast(msg,color="#7b00ff"){
   const t=document.createElement("div");
@@ -125,7 +128,12 @@ document.getElementById("registerBtn").addEventListener("click",()=>{
   });
 });
 
-document.getElementById("loginBtn").addEventListener("click",()=>{
+document.getElementById("loginBtn").addEventListener("click",loginUser);
+document.getElementById("sendBtn").addEventListener("click",sendMessage);
+msgInput.addEventListener("keypress",e=>{if(e.key==="Enter") sendMessage();});
+document.getElementById("logoutBtn").addEventListener("click",logoutUser);
+
+function loginUser(){
   const u=document.getElementById("loginUser").value.trim();
   const p=document.getElementById("loginPass").value.trim();
   if(!u||!p){showToast("Preencha todos os campos","red");return;}
@@ -135,13 +143,22 @@ document.getElementById("loginBtn").addEventListener("click",()=>{
       username=u; showToast("Login bem-sucedido! ✅","#4caf50");
       db.collection("users").doc(snap.docs[0].id).update({status:"online"});
       loginScreen.classList.add("hidden"); chatScreen.classList.remove("hidden");
-      header.innerText="Chat - "+username;
+      header.querySelector("span").innerText="Chat - "+username;
       startChat(); monitorUsers();
     }).catch(e=>showToast("Erro ao logar: "+e.message,"red"));
-});
+}
 
-document.getElementById("sendBtn").addEventListener("click",sendMessage);
-msgInput.addEventListener("keypress",e=>{if(e.key==="Enter") sendMessage();});
+function logoutUser(){
+  if(!username) return;
+  db.collection("users").where("username","==",username).get().then(snap=>{
+    if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"offline"});
+    username="";
+    chatScreen.classList.add("hidden");
+    loginScreen.classList.remove("hidden");
+    chatBox.innerHTML="";
+    userList.innerHTML="";
+  });
+}
 
 function sendMessage(){
   const text=msgInput.value.trim();
@@ -176,20 +193,21 @@ function monitorUsers(){
       const div=document.createElement("div");
       div.className="user-item"+(user.status==="afk"?" afk":"");
       div.innerText=user.username;
-      const status=document.createElement("span"); status.innerText=user.status==="afk"?"AFK":"online";
+      const status=document.createElement("span"); status.innerText=user.status==="afk"?"AFK":user.status==="offline"?"Offline":"Online";
       div.appendChild(status); userList.appendChild(div);
     });
   });
 }
 
-// AFK automático
 function setAFK(){
+  if(!username) return;
   db.collection("users").where("username","==",username).get().then(snap=>{
     if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"afk"});
   });
 }
 
 function setOnline(){
+  if(!username) return;
   db.collection("users").where("username","==",username).get().then(snap=>{
     if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"online"});
   });
@@ -197,7 +215,6 @@ function setOnline(){
 
 window.addEventListener("blur",()=>{setAFK();});
 window.addEventListener("focus",()=>{setOnline();});
-
 </script>
 </body>
 </html>
