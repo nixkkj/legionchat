@@ -2,45 +2,44 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Admin - Legion Chat</title>
+<title>Painel Admin - Legion Chat</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
-body{background:linear-gradient(135deg,#0a0a0f,#1a0033);color:white;height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:20px;}
-.container{width:95%;max-width:1200px;display:flex;gap:20px;}
-.side-box{background:rgba(20,0,40,0.8);border-radius:20px;flex:1;display:flex;flex-direction:column;overflow:hidden;}
-.side-header{background:linear-gradient(90deg,#6a00ff,#9d00ff);padding:10px;text-align:center;}
-.side-content{flex:1;padding:10px;overflow-y:auto;}
-.item{display:flex;justify-content:space-between;align-items:center;padding:8px;margin-bottom:5px;border-radius:8px;background:#2a2a2a;word-break:break-word;}
-button{padding:5px 10px;border:none;border-radius:5px;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;cursor:pointer;margin-left:5px;}
+body{height:100vh;background:linear-gradient(135deg,#0a0a0f,#1a0033);display:flex;justify-content:center;align-items:center;}
+.container{width:90%;max-width:1200px;height:80vh;display:flex;gap:20px;}
+.hidden{display:none;}
+.panel{flex:1;background:rgba(20,0,40,0.8);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;}
+.panel-header{background:linear-gradient(90deg,#6a00ff,#9d00ff);padding:10px;text-align:center;color:white;}
+.panel-content{flex:1;padding:10px;overflow-y:auto;}
+.button{padding:8px 12px;border:none;border-radius:5px;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;cursor:pointer;margin:2px 0;display:block;width:100%;}
 .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#7b00ff;padding:12px 20px;border-radius:10px;display:none;animation:fade 0.5s;}
 @keyframes fade{from{opacity:0;top:0;}to{opacity:1;top:20px;}}
 .status{width:10px;height:10px;border-radius:50%;margin-right:5px;}
 .status.online{background:green;}
 .status.afk{background:orange;}
 .status.offline{background:red;}
-.chat-blocked{color:red;font-weight:bold;margin-bottom:10px;}
+input{width:100%;padding:8px;border-radius:5px;border:none;margin-bottom:5px;}
 </style>
 </head>
 <body>
-
 <div class="container">
-<div class="side-box" style="flex:2;">
-<div class="side-header">Mensagens</div>
-<div class="side-content" id="messagesBox"></div>
+<div class="panel">
+<div class="panel-header">Mensagens</div>
+<div class="panel-content" id="messagesPanel"></div>
+<input type="text" id="globalMessage" placeholder="Mensagem de aviso para todos">
+<button id="sendGlobal" class="button">Enviar Aviso Global</button>
+<button id="lockChatAll" class="button">Bloquear Chat para Todos</button>
 </div>
 
-<div class="side-box">
-<div class="side-header">Usuários</div>
-<div class="side-content" id="usersBox"></div>
+<div class="panel">
+<div class="panel-header">Usuários</div>
+<div class="panel-content" id="usersAdminPanel"></div>
 </div>
 
-<div class="side-box">
-<div class="side-header">Aviso / Controle</div>
-<div class="side-content">
-<div class="chat-blocked" id="chatStatus">Chat desbloqueado</div>
-<input type="text" id="announcementInput" placeholder="Digite aviso..." style="width:100%;margin-bottom:5px;padding:5px;border-radius:5px;border:none;background:#1f1f2e;color:white;">
-<button id="sendAnnouncement">Enviar Aviso</button>
-<button id="toggleChat">Bloquear / Desbloquear Chat</button>
+<div class="panel">
+<div class="panel-header">Controle</div>
+<div class="panel-content">
+<button id="logoutAdmin" class="button">Sair</button>
 </div>
 </div>
 </div>
@@ -64,95 +63,91 @@ firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 const auth=firebase.auth();
 
-const messagesBox=document.getElementById("messagesBox");
-const usersBox=document.getElementById("usersBox");
-const announcementInput=document.getElementById("announcementInput");
-const sendAnnouncement=document.getElementById("sendAnnouncement");
-const toggleChat=document.getElementById("toggleChat");
-const chatStatus=document.getElementById("chatStatus");
+const messagesPanel=document.getElementById("messagesPanel");
+const usersAdminPanel=document.getElementById("usersAdminPanel");
+const globalMessage=document.getElementById("globalMessage");
+const sendGlobal=document.getElementById("sendGlobal");
+const lockChatAll=document.getElementById("lockChatAll");
+const logoutAdmin=document.getElementById("logoutAdmin");
 const toast=document.getElementById("toast");
-
-let currentUser=null, chatBlocked=false;
 
 function showToast(msg){toast.innerText=msg;toast.style.display="block";setTimeout(()=>toast.style.display="none",3000);}
 
-// Verifica login e se é admin
+let currentUser=null;
+
 auth.onAuthStateChanged(async user=>{
-if(!user){window.location.href="index.html";return;}
-const doc=await db.collection("users").doc(user.uid).get();
-if(!doc.exists||doc.data().role!=="admin"){auth.signOut();window.location.href="index.html";return;}
+if(!user) window.location.href="index.html";
+else{
 currentUser=user;
-listenMessages();
-listenUsers();
-listenChatBlock();
+const doc=await db.collection("users").doc(user.uid).get();
+if(!doc.exists || doc.data().role!=="admin") window.location.href="index.html";
+startMessages();
+startUsers();
+}
 });
 
-// Monitorar mensagens
-function listenMessages(){
+function startMessages(){
 db.collection("messages").orderBy("time").onSnapshot(s=>{
-messagesBox.innerHTML="";
+messagesPanel.innerHTML="";
 s.forEach(d=>{
 const m=d.data();
 const div=document.createElement("div");
-div.className="item";
-div.innerHTML=`<span>${m.user} (${new Date(m.time.toDate()).toLocaleTimeString()}): ${m.text}</span>`;
-const delBtn=document.createElement("button");
-delBtn.innerText="Apagar";
-delBtn.onclick=()=>db.collection("messages").doc(d.id).delete();
-div.appendChild(delBtn);
-messagesBox.appendChild(div);
+div.innerHTML=`<b>${m.user}</b>: ${m.text} <button class="button" onclick="deleteMsg('${d.id}')">Apagar</button>`;
+messagesPanel.appendChild(div);
+messagesPanel.appendChild(document.createElement("hr"));
 });
 });
 }
 
-// Monitorar usuários
-function listenUsers(){
+async function deleteMsg(id){
+await db.collection("messages").doc(id).delete();
+showToast("Mensagem apagada");
+}
+
+function startUsers(){
 db.collection("users").onSnapshot(s=>{
-usersBox.innerHTML="";
+usersAdminPanel.innerHTML="";
 s.forEach(d=>{
 const u=d.data();
 const div=document.createElement("div");
-div.className="item";
-let statusClass=u.status==="online"?"online":u.status==="afk"?"afk":"offline";
-div.innerHTML=`<span><span class="status ${statusClass}"></span>${u.username} (IP: ${u.ip})</span>`;
-const blockBtn=document.createElement("button");
-blockBtn.innerText=u.blocked?"Desbloquear":"Bloquear";
-blockBtn.onclick=()=>db.collection("users").doc(d.id).update({blocked:!u.blocked});
-const delBtn=document.createElement("button");
-delBtn.innerText="Excluir";
-delBtn.onclick=()=>db.collection("users").doc(d.id).delete();
-div.appendChild(blockBtn);
-div.appendChild(delBtn);
-usersBox.appendChild(div);
+const cls=u.status==="online"?"online":u.status==="afk"?"afk":"offline";
+div.innerHTML=`<span class="status ${cls}"></span>${u.username} | IP: ${u.ip} <button class="button" onclick="blockUser('${d.id}')">Bloquear</button> <button class="button" onclick="deleteUser('${d.id}')">Excluir</button> <button class="button" onclick="lockChatUser('${d.id}')">Bloquear Chat</button>`;
+usersAdminPanel.appendChild(div);
+usersAdminPanel.appendChild(document.createElement("hr"));
 });
 });
+}
 
-// Enviar aviso global
-sendAnnouncement.onclick=async()=>{
-const text=announcementInput.value.trim();
-if(!text){showToast("Digite um aviso");return;}
-await db.collection("announcements").add({text,time:new Date()});
-announcementInput.value="";
-showToast("Aviso enviado ✅");
+async function blockUser(uid){
+await db.collection("users").doc(uid).update({blocked:true});
+showToast("Usuário bloqueado");
+}
+
+async function deleteUser(uid){
+await db.collection("users").doc(uid).delete();
+showToast("Usuário excluído");
+}
+
+async function lockChatUser(uid){
+await db.collection("users").doc(uid).update({chatBlocked:true});
+showToast("Chat do usuário bloqueado");
+}
+
+lockChatAll.onclick=async()=>{
+const s=await db.collection("users").get();
+s.forEach(d=>d.ref.update({chatBlocked:true}));
+showToast("Chat bloqueado para todos");
 };
 
-// Bloquear / desbloquear chat global
-toggleChat.onclick=async()=>{
-const ref=db.collection("settings").doc("chat");
-const doc=await ref.get();
-chatBlocked=!doc.exists?true:!doc.data().blocked;
-await ref.set({blocked:chatBlocked});
-showToast(chatBlocked?"Chat bloqueado para todos":"Chat desbloqueado");
-chatStatus.innerText=chatBlocked?"Chat bloqueado":"Chat desbloqueado";
-}
+sendGlobal.onclick=async()=>{
+const text=globalMessage.value.trim();
+if(!text) return;
+await db.collection("globalAlerts").add({text,time:new Date()});
+showToast("Aviso enviado para todos");
+globalMessage.value="";
+};
 
-// Atualizar status chat bloqueado
-function listenChatBlock(){
-db.collection("settings").doc("chat").onSnapshot(doc=>{
-chatBlocked=doc.data()?.blocked||false;
-chatStatus.innerText=chatBlocked?"Chat bloqueado":"Chat desbloqueado";
-});
-}
+logoutAdmin.onclick=()=>auth.signOut();
 </script>
 </body>
 </html>
