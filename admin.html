@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Admin Panel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
+body{background:linear-gradient(135deg,#0a0a0f,#1a0033);color:white;height:100vh;display:flex;flex-direction:column;align-items:center;}
+.hidden{display:none;}
+.toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;font-weight:bold;animation:fadeInOut 2.5s forwards;opacity:0;}
+@keyframes fadeInOut{0%{opacity:0;transform:translateX(-50%) translateY(-20px);}10%{opacity:1;transform:translateX(-50%) translateY(0);}90%{opacity:1;transform:translateX(-50%) translateY(0);}100%{opacity:0;transform:translateX(-50%) translateY(-20px);}}
+.container{width:90%;max-width:1200px;display:flex;gap:10px;margin-top:20px;}
+.panel{background:rgba(20,0,40,0.8);padding:15px;border-radius:15px;flex:1;max-height:80vh;overflow-y:auto;}
+.panel h4{margin-bottom:10px;}
+.message-item{padding:5px;border-radius:5px;margin:3px 0;background:rgba(255,255,255,0.1);}
+.user-item{padding:5px;border-radius:5px;margin:3px 0;background:rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;}
+.user-item button{margin-left:5px;padding:3px 5px;border:none;border-radius:5px;background:#c00000;color:white;cursor:pointer;}
+button{padding:5px 10px;border:none;border-radius:5px;background:#7b00ff;color:white;cursor:pointer;margin:2px;}
+</style>
+</head>
+<body>
+<div id="toastContainer"></div>
+<h2>Painel de Administração</h2>
+<button id="logoutBtn">Sair</button>
+<div class="container">
+  <div class="panel">
+    <h4>Mensagens do Chat</h4>
+    <div id="messagesList"></div>
+    <button id="clearChatBtn">Limpar Chat</button>
+  </div>
+  <div class="panel">
+    <h4>Usuários</h4>
+    <div id="usersList"></div>
+  </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDDj9IeS53XEEv07dULX2-OWbVvQyQbf6Y",
+  authDomain: "legion-chat-d69be.firebaseapp.com",
+  projectId: "legion-chat-d69be",
+  storageBucket: "legion-chat-d69be.firebasestorage.app",
+  messagingSenderId: "880449921734",
+  appId: "1:880449921734:web:cdf622d2af44cb6ae8adc7",
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore();
+let username="",role="";
+
+function showToast(msg,color="#7b00ff"){const t=document.createElement("div");t.className="toast";t.style.background=color;t.innerText=msg;document.getElementById("toastContainer").appendChild(t);setTimeout(()=>t.remove(),2500);}
+
+username=prompt("Digite seu usuário admin:");
+db.collection("users").where("username","==",username).get().then(snap=>{if(snap.empty){showToast("Usuário não encontrado","red");throw"stop";}role=snap.docs[0].data().role;if(role!=="admin"){showToast("Acesso negado","red");throw"stop";}startAdmin();}).catch(()=>{location.href="index.html";});
+
+document.getElementById("logoutBtn").addEventListener("click",()=>{location.href="index.html";});
+
+function startAdmin(){
+const messagesList=document.getElementById("messagesList");
+const usersList=document.getElementById("usersList");
+
+db.collectionGroup("messages").orderBy("timestamp").onSnapshot(snapshot=>{messagesList.innerHTML="";snapshot.docs.forEach(doc=>{const msg=doc.data();const div=document.createElement("div");div.className="message-item";div.innerText=`[${msg.displayTime||""}] ${msg.user}: ${msg.data}`;messagesList.appendChild(div);});messagesList.scrollTop=messagesList.scrollHeight;});
+
+db.collection("users").onSnapshot(snapshot=>{usersList.innerHTML="";snapshot.docs.forEach(doc=>{const user=doc.data();const div=document.createElement("div");div.className="user-item";div.innerText=user.username;const status=document.createElement("span");status.innerText=user.status;div.appendChild(status);const btnDelete=document.createElement("button");btnDelete.innerText="Apagar";btnDelete.onclick=()=>{db.collection("users").doc(doc.id).delete();showToast("Usuário apagado","#4caf50");};div.appendChild(btnDelete);const btnBlock=document.createElement("button");btnBlock.innerText="Bloquear";btnBlock.onclick=()=>{db.collection("users").doc(doc.id).update({status:"offline"});showToast("Usuário bloqueado","#ff9800");};div.appendChild(btnBlock);usersList.appendChild(div);});});
+
+document.getElementById("clearChatBtn").addEventListener("click",()=>{db.collection("rooms").doc("general").collection("messages").get().then(snap=>{snap.forEach(doc=>{db.collection("rooms").doc("general").collection("messages").doc(doc.id).delete();});showToast("Chat limpo","#4caf50");});});
+}
+</script>
+</body>
+</html>
