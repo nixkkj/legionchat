@@ -153,20 +153,27 @@ document.getElementById("loginBtn").addEventListener("click",()=>{
   const u=document.getElementById("loginUser").value.trim();
   const p=document.getElementById("loginPass").value.trim();
   if(!u||!p){showToast("Preencha todos os campos","red"); return;}
-  db.collection("users").where("username","==",u).where("password","==",p).get().then(snap=>{
-    if(snap.empty){showToast("Usuário ou senha incorretos","red"); return;}
-    username=u; showToast("Login bem-sucedido! ✅","#4caf50");
-    db.collection("users").doc(snap.docs[0].id).update({status:"online"});
-    setTimeout(()=>{
+
+  db.collection("users").where("username","==",u).where("password","==",p).get()
+    .then(snap=>{
+      if(snap.empty){showToast("Usuário ou senha incorretos","red"); return;}
+      username=u;
+      showToast("Login bem-sucedido! ✅","#4caf50");
+
+      db.collection("users").doc(snap.docs[0].id).update({status:"online"});
+
+      room = "general"; // sala inicial
+
       loginScreen.classList.add("hidden");
       sidePanel.classList.remove("hidden"); 
       chatWrapper.classList.remove("hidden"); 
       usersPanel.classList.remove("hidden");
       header.innerText="Chat - "+username;
+
       startChat();
       monitorUsers();
-    },800);
-  });
+    })
+    .catch(e=>showToast("Erro ao logar: "+e.message,"red"));
 });
 
 function formatTime(ts){const d=new Date(ts);return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0")}
