@@ -13,10 +13,11 @@ body{background:linear-gradient(135deg,#0a0a0f,#1a0033);color:white;height:100vh
 .login-screen input{width:100%;padding:12px;margin:10px 0;border-radius:12px;border:none;background:#1f1f2e;color:white;font-size:14px;}
 .login-screen button{width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;margin-top:10px;font-weight:bold;cursor:pointer;transition:0.3s;}
 .login-screen button:hover{opacity:0.85;}
-.layout-container{width:95%;max-width:1200px;display:flex;gap:20px;height:80vh;}
-.box{flex:1;background:rgba(20,0,40,0.85);border-radius:20px;display:flex;flex-direction:column;backdrop-filter:blur(12px);box-shadow:0 0 50px rgba(140,0,255,0.2);}
+.layout-container{width:95%;max-width:1300px;display:flex;gap:20px;height:80vh;justify-content:center;align-items:flex-start;}
+.box{background:rgba(20,0,40,0.85);border-radius:20px;display:flex;flex-direction:column;backdrop-filter:blur(12px);box-shadow:0 0 50px rgba(140,0,255,0.2);}
 .box-header{background:linear-gradient(90deg,#6a00ff,#9d00ff);padding:12px 15px;border-radius:20px 20px 0 0;font-weight:bold;text-align:center;}
-.chat-box,.users-list,.logs-list{flex:1;padding:15px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;}
+.chat-box{flex:1;padding:15px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:70vh;}
+.users-list,.logs-list{flex:1;padding:10px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:70vh;}
 .chat-box::-webkit-scrollbar,.users-list::-webkit-scrollbar,.logs-list::-webkit-scrollbar{width:8px;}
 .chat-box::-webkit-scrollbar-thumb,.users-list::-webkit-scrollbar-thumb,.logs-list::-webkit-scrollbar-thumb{background:linear-gradient(#7b00ff,#c000ff);border-radius:10px;}
 .message{max-width:70%;padding:10px 14px;border-radius:15px;color:white;font-size:14px;word-wrap:break-word;animation:fadeIn 0.2s;}
@@ -29,6 +30,8 @@ body{background:linear-gradient(135deg,#0a0a0f,#1a0033);color:white;height:100vh
 .user-item{margin:5px 0;padding:6px 10px;background:rgba(30,0,50,0.5);border-radius:10px;}
 .log-item{margin:5px 0;padding:6px 10px;background:rgba(30,0,50,0.5);border-radius:10px;font-size:13px;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+#chatBoxContainer{flex:3;display:flex;flex-direction:column;}
+#usersContainer,#logsContainer{flex:1;display:flex;flex-direction:column;}
 </style>
 </head>
 <body>
@@ -109,6 +112,5 @@ function startChat(){const chatBox=document.getElementById("chatBox");db.collect
 function monitorUsers(){const usersList=document.getElementById("usersList");db.collection("users").onSnapshot(snapshot=>{usersList.innerHTML="";snapshot.docs.forEach(doc=>{const u=doc.data();const div=document.createElement("div");div.className="user-item";div.innerText=u.username+" - "+u.status;usersList.appendChild(div);});});window.addEventListener("beforeunload",()=>{if(auth.currentUser)db.collection("users").doc(auth.currentUser.uid).update({status:"afk"});});}
 function loadUpdateLogs(){const logsList=document.getElementById("logsList");db.collection("updateLogs").orderBy("timestamp","desc").onSnapshot(snapshot=>{logsList.innerHTML="";snapshot.docs.forEach(doc=>{const log=doc.data();const div=document.createElement("div");div.className="log-item";div.innerHTML=`<strong>Patch ${log.date}</strong><br>${log.changes.map(c=>`[-] ${c}`).join("<br>")}`;logsList.appendChild(div);});});}
 </script>
-
 </body>
 </html>
