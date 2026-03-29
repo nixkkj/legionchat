@@ -4,79 +4,86 @@
 <meta charset="UTF-8">
 <title>Legion Chat</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial;}
-body{background:linear-gradient(135deg,#0a0a0f,#1a0033);height:100vh;display:flex;justify-content:center;align-items:center;color:white;}
-.login{width:350px;background:rgba(20,0,40,0.9);padding:30px;border-radius:20px;}
-.login input{width:100%;padding:12px;margin:10px 0;border:none;border-radius:10px;background:#1f1f2e;color:white;}
-.btn{padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;cursor:pointer;font-weight:bold;margin:5px 0;}
-.main{display:none;width:1200px;height:80vh;gap:20px;display:flex;}
-.chat{flex:1;display:flex;flex-direction:column;background:rgba(20,0,40,0.9);border-radius:20px;}
-.header{background:linear-gradient(90deg,#6a00ff,#9d00ff);padding:10px;display:flex;justify-content:space-between;border-radius:20px 20px 0 0;}
-.chat-box{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:10px;}
-.message{max-width:70%;padding:10px;border-radius:15px;position:relative;word-break:break-word;}
-.sent{align-self:flex-end;background:#7b00ff;}
-.received{align-self:flex-start;background:#2a2a2a;}
-.input{display:flex;padding:10px;}
-.input input{flex:1;padding:12px;border:none;border-radius:10px;background:#1f1f2e;color:white;}
-.side{width:260px;display:flex;flex-direction:column;gap:10px;}
-.box{background:rgba(20,0,40,0.9);border-radius:20px;display:flex;flex-direction:column;height:33%;}
-.box-header{background:linear-gradient(90deg,#6a00ff,#9d00ff);padding:8px;text-align:center;border-radius:20px 20px 0 0;}
-.box-content{flex:1;overflow-y:auto;padding:8px;}
-.item{background:#2a2a2a;padding:6px;border-radius:8px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;}
-.status{width:10px;height:10px;border-radius:50%;margin-right:5px;}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
+body{background:linear-gradient(135deg,#0a0a0f,#1a0033);color:white;height:100vh;display:flex;justify-content:center;align-items:center;}
+.hidden{display:none;}
+.login-container, .main-container{width:95%;max-width:1000px;height:90vh;}
+.login-container{background:rgba(20,0,40,0.8);border-radius:20px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:30px;}
+.login-container input{width:250px;margin:10px;padding:10px;border-radius:10px;border:none;background:#1f1f2e;color:white;}
+.login-container button{margin-top:10px;padding:10px 20px;border-radius:10px;border:none;background:linear-gradient(135deg,#7b00ff,#c000ff);cursor:pointer;color:white;font-weight:bold;}
+.main-container{display:flex;gap:20px;align-items:flex-start;}
+.chat-container{flex:3;background:rgba(20,0,40,0.8);border-radius:20px;display:flex;flex-direction:column;overflow:hidden;}
+.chat-header{padding:15px;text-align:center;background:linear-gradient(90deg,#6a00ff,#9d00ff);border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;}
+.chat-box{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;}
+.chat-box::-webkit-scrollbar{width:8px;}
+.chat-box::-webkit-scrollbar-thumb{background:linear-gradient(#7b00ff,#c000ff);border-radius:10px;}
+.message{max-width:70%;padding:10px 14px;border-radius:15px;font-size:14px;animation:fadeIn 0.2s ease;word-wrap:break-word;}
+.sent{background:linear-gradient(135deg,#7b00ff,#c000ff);align-self:flex-end;color:white;}
+.received{background:#2a2a2a;align-self:flex-start;color:white;}
+.chat-input{display:flex;padding:15px;background:rgba(10,0,20,0.9);}
+.chat-input input{flex:1;padding:10px;border-radius:10px;border:none;background:#1f1f2e;color:white;}
+.chat-input button{margin-left:10px;padding:10px 20px;border:none;border-radius:10px;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;cursor:pointer;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.side-layouts{flex:1;display:flex;flex-direction:column;gap:20px;}
+.side-box{background:rgba(20,0,40,0.8);border-radius:20px;overflow:hidden;flex:1;display:flex;flex-direction:column;}
+.side-header{background:linear-gradient(90deg,#6a00ff,#9d00ff);padding:10px;text-align:center;}
+.side-content{flex:1;padding:10px;overflow-y:auto;}
+.item{display:flex;justify-content:space-between;align-items:center;padding:8px;margin-bottom:5px;border-radius:8px;background:#2a2a2a;}
 .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#7b00ff;padding:12px 20px;border-radius:10px;display:none;animation:fade 0.5s;}
 @keyframes fade{from{opacity:0;top:0;}to{opacity:1;top:20px;}}
+.status{width:10px;height:10px;border-radius:50%;margin-right:5px;}
+.status.online{background:green;}
+.status.afk{background:orange;}
+.status.offline{background:red;}
+.discord-link{display:flex;align-items:center;gap:5px;text-decoration:none;color:white;font-weight:bold;}
+.discord-link img{width:20px;height:20px;}
 </style>
 </head>
 <body>
 
-<div id="loginScreen" class="login">
-<h2>Login</h2>
-<input id="user" placeholder="Usuário">
-<input id="pass" type="password" placeholder="Senha">
-<button class="btn" onclick="login()">Entrar</button>
-<button class="btn" onclick="register()">Criar Conta</button>
+<div class="login-container" id="loginScreen">
+<h2>Login / Registrar</h2>
+<input id="loginUser" placeholder="Usuário">
+<input id="loginPass" type="password" placeholder="Senha">
+<button id="loginBtn">Login</button>
+<button id="registerBtn">Registrar</button>
 </div>
 
-<div id="main" class="main">
-
-<div class="chat">
-<div class="header">
-<span id="username"></span>
+<div class="main-container hidden" id="mainContainer">
+<div class="chat-container">
+<div class="chat-header" id="chatHeader">
+<span id="chatTitle">Chat</span>
 <div>
-<button class="btn" onclick="location.href='admin.html'">Admin</button>
-<button class="btn" onclick="logout()">Sair</button>
+<button id="adminBtn" style="margin-right:5px;padding:5px 10px;border-radius:5px;border:none;background:#7b00ff;color:white;cursor:pointer;">Admin</button>
+<button id="logoutBtn" style="padding:5px 10px;border-radius:5px;border:none;background:#c000ff;color:white;cursor:pointer;">Sair</button>
 </div>
 </div>
-<div id="chatBox" class="chat-box"></div>
-<div id="typing"></div>
-<div class="input">
-<input id="msg" placeholder="Digite sua mensagem">
-<button class="btn" onclick="send()">Enviar</button>
+<div class="chat-box" id="chatBox"></div>
+<div class="chat-input">
+<input type="text" id="msgInput" placeholder="Digite uma mensagem...">
+<button onclick="sendMessage()">Enviar</button>
 </div>
 </div>
 
-<div class="side">
-
-<div class="box">
-<div class="box-header">Usuários</div>
-<div id="usersList" class="box-content"></div>
+<div class="side-layouts">
+<div class="side-box" style="flex:1.2;">
+<div class="side-header">Usuários</div>
+<div class="side-content" id="usersBox"></div>
 </div>
 
-<div class="box">
-<div class="box-header">Update Logs</div>
-<div id="logsList" class="box-content"></div>
+<div class="side-box" style="flex:1;">
+<div class="side-header">Update Logs</div>
+<div class="side-content" id="updateBox"></div>
 </div>
 
-<div class="box">
-<div class="box-header">Legion - Discord</div>
-<div id="discordList" class="box-content">
-<a href="https://discord.gg/jhFuJYhvHz" target="_blank" style="color:white;text-decoration:none;display:flex;align-items:center;">
-<img src="https://cdn.worldvectorlogo.com/logos/discord-6.svg" width="20" style="margin-right:5px;"> Entrar no Discord
+<div class="side-box" style="flex:0.8;">
+<div class="side-header">Legion - Discord</div>
+<div class="side-content">
+<a class="discord-link" href="https://discord.gg/jhFuJYhvHz" target="_blank">
+<img src="https://cdn-icons-png.flaticon.com/512/2111/2111370.png" alt="Discord">Entrar no Discord
 </a>
 </div>
 </div>
-
 </div>
 </div>
 
@@ -99,140 +106,129 @@ firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 const auth=firebase.auth();
 
-let username="",typingTimeout,chatBlocked=false;
+let username="", userUID="", blocked=false, chatBlocked=false;
+
+const loginScreen=document.getElementById("loginScreen");
+const mainContainer=document.getElementById("mainContainer");
+const chatBox=document.getElementById("chatBox");
+const usersBox=document.getElementById("usersBox");
+const updateBox=document.getElementById("updateBox");
+const msgInput=document.getElementById("msgInput");
+const toast=document.getElementById("toast");
+const chatHeader=document.getElementById("chatHeader");
 
 function showToast(msg){toast.innerText=msg;toast.style.display="block";setTimeout(()=>toast.style.display="none",3000);}
 
-async function saveUserIP(uid){
-try{
-const res=await fetch("https://api.ipify.org?format=json");
-const data=await res.json();
-const ip=data.ip;
-let doc=await db.collection("users").doc(uid).get();
-let ips=doc.data().ips||[];
-if(!ips.includes(ip))ips.push(ip);
-await db.collection("users").doc(uid).update({ip,ips});
-}catch(e){console.log("Erro IP",e);}
-}
-
-function register(){
-let u=user.value.trim(),p=pass.value.trim();
-if(!u||!p)return showToast("Preencha os campos");
-auth.createUserWithEmailAndPassword(u+"@x.com",p).then(async r=>{
-await db.collection("users").doc(r.user.uid).set({username:u,status:"online",role:"user",ips:[]});
-await saveUserIP(r.user.uid);
+async function register(){
+const u=document.getElementById("loginUser").value.trim();
+const p=document.getElementById("loginPass").value.trim();
+if(!u||!p){showToast("Preencha todos os campos");return;}
+const snap=await db.collection("users").where("username","==",u).get();
+if(!snap.empty){showToast("Usuário já existe");return;}
+const user=await auth.createUserWithEmailAndPassword(u+"@legion.local",p);
+await db.collection("users").doc(user.user.uid).set({username:u,status:"online",role:"user",blocked:false,ip:"",lastLogin:new Date()});
 showToast("Conta criada com sucesso ✅");
-}).catch(e=>showToast(e.message));
 }
 
-function login(){
-let u=user.value.trim(),p=pass.value.trim();
-if(!u||!p)return showToast("Preencha os campos");
-auth.signInWithEmailAndPassword(u+"@x.com",p).then(async r=>{
-await saveUserIP(r.user.uid);
-let doc=await db.collection("users").doc(r.user.uid).get();
-username=doc.data().username;
-loginScreen.style.display="none";
-main.style.display="flex";
-start();
-}).catch(()=>showToast("Usuário ou senha incorretos ❌"));
+async function login(){
+const u=document.getElementById("loginUser").value.trim();
+const p=document.getElementById("loginPass").value.trim();
+if(!u||!p){showToast("Preencha todos os campos");return;}
+try{
+const user=await auth.signInWithEmailAndPassword(u+"@legion.local",p);
+const doc=await db.collection("users").doc(user.user.uid).get();
+if(!doc.exists){showToast("Usuário não encontrado");return;}
+username=u;
+userUID=user.user.uid;
+blocked=doc.data().blocked||false;
+loginScreen.classList.add("hidden");
+mainContainer.classList.remove("hidden");
+chatHeader.querySelector("#chatTitle").innerText="Chat - "+username;
+updateLogs();
+monitorUsers();
+listenChat();
+listenAnnouncements();
+listenChatBlock();
+await db.collection("users").doc(userUID).update({status:"online",ip:navigator.userAgent,lastLogin:new Date()});
+}catch(e){showToast("Usuário ou senha incorretos");}
 }
 
-function logout(){auth.signOut().then(()=>location.reload());}
+document.getElementById("registerBtn").addEventListener("click",register);
+document.getElementById("loginBtn").addEventListener("click",login);
+document.getElementById("logoutBtn").addEventListener("click",async()=>{
+await auth.signOut();
+loginScreen.classList.remove("hidden");
+mainContainer.classList.add("hidden");
+});
+document.getElementById("adminBtn").addEventListener("click",()=>{window.location.href="admin.html";});
 
-async function send(){
-if(chatBlocked)return showToast("Chat bloqueado");
-let text=msg.value.trim();
-if(!text)return;
-await db.collection("messages").add({user:username,text,time:Date.now()});
-msg.value="";
+async function sendMessage(){
+if(!msgInput.value.trim())return;
+if(blocked||chatBlocked){showToast("Você está bloqueado!");return;}
+await db.collection("messages").add({user:username,text:msgInput.value,time:new Date()});
+msgInput.value="";
 }
 
-function start(){
-loadChat();
-loadUsers();
-loadLogs();
-loadDiscord();
-monitorTyping();
-listenToast();
-monitorBlock();
+function addMessage(m,type){
+const div=document.createElement("div");
+div.className="message "+type;
+div.innerText=m;
+chatBox.appendChild(div);
+chatBox.scrollTop=chatBox.scrollHeight;
 }
 
-function loadChat(){
+function listenChat(){
 db.collection("messages").orderBy("time").onSnapshot(s=>{
 chatBox.innerHTML="";
 s.forEach(d=>{
-let m=d.data();
-let div=document.createElement("div");
-div.className="message "+(m.user===username?"sent":"received");
-div.innerText=m.user+": "+m.text;
-chatBox.appendChild(div);
+const m=d.data();
+addMessage(m.user+": "+m.text,m.user===username?"sent":"received");
 });
-chatBox.scrollTop=chatBox.scrollHeight;
 });
 }
 
-function loadUsers(){
+function monitorUsers(){
 db.collection("users").onSnapshot(s=>{
-usersList.innerHTML="";
+usersBox.innerHTML="";
 s.forEach(d=>{
-let u=d.data();
-let div=document.createElement("div");
+const u=d.data();
+const div=document.createElement("div");
 div.className="item";
-let color=u.status==="online"?"green":u.status==="afk"?"orange":"gray";
-div.innerHTML=`<div style="display:flex;align-items:center;"><div class="status" style="background:${color}"></div>${u.username}</div>`;
-usersList.appendChild(div);
+let statusClass=u.status==="online"?"online":u.status==="afk"?"afk":"offline";
+div.innerHTML=`<span><span class="status ${statusClass}"></span>${u.username}</span>`;
+usersBox.appendChild(div);
 });
 });
 }
 
-function loadLogs(){
-db.collection("updateLogs").onSnapshot(s=>{
-logsList.innerHTML="";
-s.forEach(d=>{
-let l=d.data();
-logsList.innerHTML+=`<div class="item"><b>Patch ${l.date}</b><br>${l.changes.map(c=>"- "+c).join("<br>")}</div>`;
-});
-});
-}
-
-function loadDiscord(){
-discordList.innerHTML=`
-<a href="https://discord.gg/jhFuJYhvHz" target="_blank" style="color:white;text-decoration:none;display:flex;align-items:center;">
-<img src="https://cdn.worldvectorlogo.com/logos/discord-6.svg" width="20" style="margin-right:5px;"> Entrar no Discord
-</a>`;
-}
-
-msg.addEventListener("input",()=>{
-if(!auth.currentUser)return;
-db.collection("typing").doc(auth.currentUser.uid).set({user:username});
-clearTimeout(typingTimeout);
-typingTimeout=setTimeout(()=>db.collection("typing").doc(auth.currentUser.uid).delete(),1500);
-});
-
-function monitorTyping(){
-db.collection("typing").onSnapshot(s=>{
-typing.innerText="";
-s.forEach(d=>{
-let t=d.data();
-if(t.user!==username)typing.innerText=t.user+" está digitando...";
-});
+function updateLogs(){
+const updates=[
+{patch:"2026-03-29",changes:["[-] Sistema de login implementado","[-] Bloqueio de usuários","[-] Avisos globais em toast"]},
+{patch:"2026-03-30",changes:["[-] Layout organizado para Usuários, Update Logs e Legion-Discord","[-] Mensagens tipo WhatsApp","[-] Status online/afk/offline"]}
+];
+updateBox.innerHTML="";
+updates.forEach(u=>{
+const div=document.createElement("div");
+div.className="item";
+div.innerHTML=`<strong>Patch ${u.patch}</strong><br>${u.changes.join("<br>")}`;
+updateBox.appendChild(div);
 });
 }
 
-function listenToast(){
+function listenAnnouncements(){
 db.collection("announcements").onSnapshot(s=>{
 s.docChanges().forEach(change=>{
-if(change.type==="added")showToast(change.doc.data().text);
+if(change.type==="added"){showToast("Aviso: "+change.doc.data().text);}
 });
 });
 }
 
-function monitorBlock(){
-db.collection("settings").doc("chat").onSnapshot(d=>{
-chatBlocked=d.data()?.blocked||false;
+function listenChatBlock(){
+db.collection("settings").doc("chat").onSnapshot(doc=>{
+chatBlocked=doc.data()?.blocked||false;
 });
 }
+
 </script>
 </body>
 </html>
