@@ -2,107 +2,51 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Painel Admin</title>
-
+<title>Admin - Legion Chat</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Arial;}
-
-body{
-background:linear-gradient(135deg,#0a0a0f,#1a0033);
-color:white;
-display:flex;
-flex-direction:column;
-align-items:center;
-}
-
-h2{
-margin:15px;
-}
-
-.container{
-width:1200px;
-display:flex;
-gap:20px;
-}
-
-.box{
-flex:1;
-background:rgba(20,0,40,0.9);
-border-radius:20px;
-display:flex;
-flex-direction:column;
-height:80vh;
-}
-
-.header{
-background:linear-gradient(90deg,#6a00ff,#9d00ff);
-padding:10px;
-text-align:center;
-border-radius:20px 20px 0 0;
-font-weight:bold;
-}
-
-.content{
-flex:1;
-overflow-y:auto;
-padding:10px;
-}
-
-.item{
-background:rgba(30,0,50,0.6);
-padding:10px;
-margin-bottom:8px;
-border-radius:10px;
-font-size:14px;
-}
-
-button{
-margin-top:5px;
-margin-right:5px;
-padding:6px 10px;
-border:none;
-border-radius:8px;
-background:linear-gradient(135deg,#7b00ff,#c000ff);
-color:white;
-cursor:pointer;
-font-size:12px;
-}
-
-.top-actions{
-margin-bottom:10px;
-}
-
+body{background:linear-gradient(135deg,#0a0a0f,#1a0033);color:white;height:100vh;padding:20px;}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.btn{padding:8px 15px;border:none;border-radius:10px;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;cursor:pointer;font-weight:bold;margin:2px;}
+.container{display:flex;gap:20px;}
+.box{background:rgba(20,0,40,0.9);border-radius:20px;flex:1;display:flex;flex-direction:column;max-height:80vh;}
+.box-header{background:linear-gradient(90deg,#6a00ff,#9d00ff);padding:10px;text-align:center;border-radius:20px 20px 0 0;}
+.box-content{flex:1;overflow-y:auto;padding:10px;}
+.item{background:#2a2a2a;padding:8px;border-radius:8px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#7b00ff;padding:12px 20px;border-radius:10px;display:none;animation:fade 0.5s;}
+@keyframes fade{from{opacity:0;top:0;}to{opacity:1;top:20px;}}
+input{width:100%;padding:8px;margin:5px 0;border-radius:8px;border:none;background:#1f1f2e;color:white;}
 </style>
 </head>
-
 <body>
 
-<h2>Painel Administrativo</h2>
+<div class="header">
+<h2>Painel Admin - Legion Chat</h2>
+<button class="btn" onclick="logout()">Sair</button>
+</div>
 
-<div class="top-actions">
-<button onclick="toggleChat()">Bloquear / Desbloquear Chat Global</button>
-<button onclick="location.href='index.html'">Voltar</button>
+<div class="header">
+<input id="announcementInput" placeholder="Mensagem de aviso global">
+<button class="btn" onclick="sendAnnouncement()">Enviar Aviso</button>
+<button class="btn" onclick="toggleGlobalBlock()">Bloquear/Desbloquear Chat Global</button>
 </div>
 
 <div class="container">
 
 <div class="box">
-<div class="header">Mensagens</div>
-<div id="messages" class="content"></div>
+<div class="box-header">Mensagens</div>
+<div id="messagesBox" class="box-content"></div>
 </div>
 
-  
 <div class="box">
-<div class="header">Usuários</div>
-<div id="users" class="content"></div>
-</div>
-  
-
+<div class="box-header">Usuários</div>
+<div id="usersBox" class="box-content"></div>
 </div>
 
-  <input id="globalMsg" placeholder="Aviso global">
-<button onclick="sendGlobal()">Enviar Aviso</button>
-  
+</div>
+
+<div id="toast" class="toast"></div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -116,119 +60,81 @@ const firebaseConfig = {
   messagingSenderId: "880449921734",
   appId: "1:880449921734:web:cdf622d2af44cb6ae8adc7",
 };
-
-
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 const auth=firebase.auth();
 
-auth.onAuthStateChanged(user=>{
-if(!user){
-alert("Você precisa estar logado");
-location.href="index.html";
-return;
-}
+let adminUID="";
 
-db.collection("users").doc(user.uid).get().then(doc=>{
-if(!doc.exists || doc.data().role!=="admin"){
-alert("Acesso negado");
-location.href="index.html";
-}
-});
-});
+function showToast(msg){toast.innerText=msg;toast.style.display="block";setTimeout(()=>toast.style.display="none",3000);}
+
+function logout(){auth.signOut().then(()=>location.href="index.html");}
+
+auth.onAuthStateChanged(async user=>{
+if(!user){location.href="index.html"; return;}
+let doc=await db.collection("users").doc(user.uid).get();
+if(doc.data().role!=="admin"){alert("Acesso negado");logout(); return;}
+adminUID=user.uid;
+loadMessages();loadUsers();});
 
 function loadMessages(){
-db.collection("messages").orderBy("time","desc")
-.onSnapshot(s=>{
-messages.innerHTML="";
-s.forEach(doc=>{
-let m=doc.data();
-
+db.collection("messages").orderBy("time").onSnapshot(s=>{
+messagesBox.innerHTML="";
+s.forEach(d=>{
+let m=d.data();
 let div=document.createElement("div");
 div.className="item";
-
-div.innerHTML=`
-<b>${m.user}</b>: ${m.text}
-<br>
-<button onclick="deleteMsg('${doc.id}')">Apagar</button>
-`;
-
-messages.appendChild(div);
+div.innerHTML=`<span>${m.user}: ${m.text}</span><button class="btn" onclick="deleteMessage('${d.id}')">Apagar</button>`;
+messagesBox.appendChild(div);
 });
 });
 }
 
-function deleteMsg(id){
-if(confirm("Apagar mensagem?")){
-db.collection("messages").doc(id).delete();
-}
-}
-
-  function sendGlobal(){
-let text=document.getElementById("globalMsg").value;
-
-db.collection("announcements").add({
-text:text,
-time:Date.now()
-});
-}
 function loadUsers(){
 db.collection("users").onSnapshot(s=>{
-users.innerHTML="";
-
-s.forEach(doc=>{
-let u=doc.data();
-let id=doc.id;
-
+usersBox.innerHTML="";
+s.forEach(d=>{
+let u=d.data();
 let div=document.createElement("div");
 div.className="item";
-
 div.innerHTML=`
-<b>${u.username}</b><br>
-IP: ${u.ip||"N/A"}<br>
-
-<button onclick="banUser('${id}')">Banir</button>
-<button onclick="deleteUser('${id}')">Excluir</button>
-<button onclick="blockUser('${id}')">Bloquear Chat</button>
-`;
-
-users.appendChild(div);
+<span>${u.username} - ${u.ip||"Desconhecido"}</span>
+<div>
+<button class="btn" onclick="toggleUserBlock('${d.id}')">${u.blocked?"Desbloquear":"Bloquear"}</button>
+<button class="btn" onclick="deleteUser('${d.id}')">Excluir</button>
+</div>`;
+usersBox.appendChild(div);
 });
 });
 }
 
-function banUser(id){
-if(confirm("Banir usuário?")){
-db.collection("banned").doc(id).set({banned:true});
-}
-}
+function deleteMessage(id){db.collection("messages").doc(id).delete();}
 
-function deleteUser(id){
-if(confirm("Excluir conta?")){
-db.collection("users").doc(id).delete();
-}
-}
+function deleteUser(uid){db.collection("users").doc(uid).delete();}
 
-function blockUser(id){
-if(confirm("Bloquear chat deste usuário?")){
-db.collection("users").doc(id).update({blocked:true});
-}
-}
-
-function toggleChat(){
-db.collection("config").doc("chat").get().then(doc=>{
-let state = doc.exists ? doc.data().blocked : false;
-
-db.collection("config").doc("chat").set({
-blocked: !state
-});
-
-alert(!state ? "Chat bloqueado" : "Chat liberado");
+function toggleUserBlock(uid){
+let userRef=db.collection("users").doc(uid);
+userRef.get().then(doc=>{
+let blocked=doc.data().blocked||false;
+userRef.update({blocked:!blocked});
 });
 }
 
-loadMessages();
-loadUsers();
+function toggleGlobalBlock(){
+let ref=db.collection("settings").doc("chat");
+ref.get().then(doc=>{
+let blocked=doc.data()?.blocked||false;
+ref.set({blocked:!blocked});
+});
+}
+
+function sendAnnouncement(){
+let text=announcementInput.value.trim();
+if(!text)return;
+db.collection("announcements").add({text});
+announcementInput.value="";
+showToast("Aviso enviado para todos ✅");
+}
 </script>
 
 </body>
