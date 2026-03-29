@@ -5,14 +5,14 @@
 <title>Legion Chat</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
-body{height:100vh;background:linear-gradient(135deg,#0a0a0f,#1a0033);display:flex;justify-content:center;align-items:center;}
+body{height:100vh;background:linear-gradient(135deg,#0a0a0f,#1a0033);display:flex;justify-content:center;align-items:center;position:relative;}
 .hidden{display:none;}
-.chat-container{width:90%;max-width:1000px;height:80vh;background:rgba(20,0,40,0.8);border-radius:20px;backdrop-filter:blur(12px);box-shadow:0 0 40px rgba(140,0,255,0.4);display:flex;flex-direction:row;overflow:hidden;}
 .login-container{width:350px;background:rgba(0,0,0,0.8);padding:30px;border-radius:15px;text-align:center;color:white;}
 .login-container input{width:100%;padding:10px;margin:10px 0;border-radius:8px;border:none;background:#1f1f2e;color:white;}
 .login-container button{padding:10px 20px;margin-top:10px;border:none;border-radius:8px;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;cursor:pointer;}
 .toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;color:white;font-weight:bold;animation:fadeInOut 2.5s forwards;opacity:0;}
 @keyframes fadeInOut{0%{opacity:0;transform:translateX(-50%) translateY(-20px);}10%{opacity:1;transform:translateX(-50%) translateY(0);}90%{opacity:1;transform:translateX(-50%) translateY(0);}100%{opacity:0;transform:translateX(-50%) translateY(-20px);}}
+.chat-container{width:90%;max-width:1200px;height:80vh;background:rgba(20,0,40,0.8);border-radius:20px;backdrop-filter:blur(12px);box-shadow:0 0 40px rgba(140,0,255,0.4);display:flex;overflow:hidden;}
 .side-panel{width:200px;background:rgba(0,0,0,0.3);color:white;padding:10px;display:flex;flex-direction:column;}
 .chat-wrapper{flex:1;display:flex;flex-direction:column;}
 .chat-header{padding:15px;text-align:center;color:#fff;background:linear-gradient(90deg,#6a00ff,#9d00ff);display:flex;justify-content:space-between;align-items:center;}
@@ -30,6 +30,8 @@ body{height:100vh;background:linear-gradient(135deg,#0a0a0f,#1a0033);display:fle
 .user-item{padding:5px;border-radius:5px;margin:2px 0;background:rgba(255,255,255,0.1);display:flex;justify-content:space-between;}
 .afk{opacity:0.5;}
 .logout-btn{padding:5px 10px;border:none;border-radius:5px;background:#c00000;color:white;cursor:pointer;}
+.update-logs{width:250px;background:rgba(0,0,0,0.2);color:white;padding:10px;display:flex;flex-direction:column;}
+.update-logs h4{margin-bottom:10px;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 </style>
 </head>
@@ -70,13 +72,21 @@ body{height:100vh;background:linear-gradient(135deg,#0a0a0f,#1a0033);display:fle
       <button id="sendBtn">Enviar</button>
     </div>
   </div>
+  <div class="update-logs">
+    <h4>Update Logs</h4>
+    <div id="updateList">
+      <p>[10:00] Sistema de login implementado ✅</p>
+      <p>[10:05] Chat ordenando mensagens corretamente ✅</p>
+      <p>[10:10] Lista de usuários online/AFK ✅</p>
+      <p>[10:15] Painel Update Logs adicionado ✅</p>
+    </div>
+  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <script>
-// CONFIGURE SEU FIREBASE AQUI
 const firebaseConfig = {
   apiKey: "AIzaSyDDj9IeS53XEEv07dULX2-OWbVvQyQbf6Y",
   authDomain: "legion-chat-d69be.firebaseapp.com",
@@ -105,15 +115,12 @@ const header=document.getElementById("header");
 const chatBox=document.getElementById("chatBox");
 const msgInput=document.getElementById("msgInput");
 const userList=document.getElementById("userList");
-const typingStatus=document.getElementById("typingStatus");
 
 document.getElementById("showRegister").addEventListener("click",()=>{
-  loginScreen.classList.add("hidden");
-  registerScreen.classList.remove("hidden");
+  loginScreen.classList.add("hidden"); registerScreen.classList.remove("hidden");
 });
 document.getElementById("showLogin").addEventListener("click",()=>{
-  registerScreen.classList.add("hidden");
-  loginScreen.classList.remove("hidden");
+  registerScreen.classList.add("hidden"); loginScreen.classList.remove("hidden");
 });
 
 document.getElementById("registerBtn").addEventListener("click",()=>{
@@ -161,27 +168,33 @@ function logoutUser(){
 }
 
 function sendMessage(){
-  const text=msgInput.value.trim();
+  if(!username){showToast("Você precisa estar logado para enviar mensagens","red"); return;}
+  const text = msgInput.value.trim();
   if(!text) return;
-  const now=new Date();
-  const time=now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0");
-  db.collection("rooms").doc(room).collection("messages").add({user:username,data:text,time:time})
-    .then(()=>{msgInput.value="";})
+  const now = new Date();
+  const displayTime = now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0");
+  db.collection("rooms").doc(room).collection("messages").add({
+    user: username,
+    data: text,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    displayTime: displayTime
+  }).then(()=>{msgInput.value="";})
     .catch(e=>showToast("Erro: "+e.message,"red"));
 }
 
 function startChat(){
-  db.collection("rooms").doc(room).collection("messages").orderBy("time")
+  db.collection("rooms").doc(room).collection("messages")
+    .orderBy("timestamp")
     .onSnapshot(snapshot=>{
       chatBox.innerHTML="";
       snapshot.docs.forEach(doc=>{
         const msg=doc.data();
         const div=document.createElement("div");
         div.className="message "+(msg.user===username?"sent":"received");
-        div.innerText=`[${msg.time}] ${msg.user}: ${msg.data}`;
+        div.innerText=`[${msg.displayTime}] ${msg.user}: ${msg.data}`;
         chatBox.appendChild(div);
       });
-      chatBox.scrollTop=chatBox.scrollHeight;
+      chatBox.scrollTop = chatBox.scrollHeight;
     });
 }
 
@@ -193,25 +206,16 @@ function monitorUsers(){
       const div=document.createElement("div");
       div.className="user-item"+(user.status==="afk"?" afk":"");
       div.innerText=user.username;
-      const status=document.createElement("span"); status.innerText=user.status==="afk"?"AFK":user.status==="offline"?"Offline":"Online";
-      div.appendChild(status); userList.appendChild(div);
+      const status=document.createElement("span"); 
+      status.innerText=user.status==="afk"?"AFK":user.status==="offline"?"Offline":"Online";
+      div.appendChild(status);
+      userList.appendChild(div);
     });
   });
 }
 
-function setAFK(){
-  if(!username) return;
-  db.collection("users").where("username","==",username).get().then(snap=>{
-    if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"afk"});
-  });
-}
-
-function setOnline(){
-  if(!username) return;
-  db.collection("users").where("username","==",username).get().then(snap=>{
-    if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"online"});
-  });
-}
+function setAFK(){if(!username) return; db.collection("users").where("username","==",username).get().then(snap=>{if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"afk"});});}
+function setOnline(){if(!username) return; db.collection("users").where("username","==",username).get().then(snap=>{if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"online"});});}
 
 window.addEventListener("blur",()=>{setAFK();});
 window.addEventListener("focus",()=>{setOnline();});
