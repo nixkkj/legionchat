@@ -87,32 +87,34 @@ function showToast(msg,color="#7b00ff"){const t=document.createElement("div");t.
 
 function showChat(){document.getElementById("loginScreen").classList.add("hidden");document.getElementById("chatContainer").classList.remove("hidden");document.getElementById("header").innerText="Chat - "+username;if(role==="admin")document.getElementById("adminBtn").classList.remove("hidden");startChat();monitorUsers();loadUpdateLogs();}
 
-document.getElementById("registerBtn").addEventListener("click",()=>{
-  const u=document.getElementById("loginUser").value.trim();
-  const p=document.getElementById("loginPass").value.trim();
-  if(!u||!p){showToast("Preencha todos os campos","red");return;}
+document.getElementById("registerBtn").addEventListener("click", () => {
+  const u = document.getElementById("loginUser").value.trim();
+  const p = document.getElementById("loginPass").value.trim();
+  if (!u || !p) { showToast("Preencha todos os campos","red"); return; }
   db.collection("users").where("username","==",u).get().then(snap=>{
-    if(!snap.empty){showToast("Usuário já existe","red");return;}
-    auth.createUserWithEmailAndPassword(u+"@legionchat.fake",p).then(cred=>{
-      db.collection("users").doc(cred.user.uid).set({username:u,status:"online",role:"user"}).then(()=>{
-        showToast("Conta criada com sucesso ✅","#4caf50");
-      });
-    }).catch(e=>showToast(e.message,"red"));
+    if(!snap.empty){ showToast("Usuário já existe","red"); return; }
+    auth.createUserWithEmailAndPassword(u+"@legionchat.fake", p)
+      .then(cred => db.collection("users").doc(cred.user.uid).set({username:u, status:"online", role:"user"}))
+      .then(()=> showToast("Conta criada com sucesso! ✅","#4caf50"))
+      .catch(e=> showToast(e.message,"red"));
   });
 });
 
-document.getElementById("loginBtn").addEventListener("click",()=>{
-  const u=document.getElementById("loginUser").value.trim();
-  const p=document.getElementById("loginPass").value.trim();
-  if(!u||!p){showToast("Preencha todos os campos","red");return;}
-  auth.signInWithEmailAndPassword(u+"@legionchat.fake",p).then(cred=>{
-    db.collection("users").doc(cred.user.uid).get().then(doc=>{
-      username=doc.data().username; role=doc.data().role;
+document.getElementById("loginBtn").addEventListener("click", () => {
+  const u = document.getElementById("loginUser").value.trim();
+  const p = document.getElementById("loginPass").value.trim();
+  if(!u || !p){ showToast("Preencha todos os campos","red"); return; }
+  auth.signInWithEmailAndPassword(u+"@legionchat.fake", p)
+    .then(cred => db.collection("users").doc(cred.user.uid).get())
+    .then(doc => {
+      if(!doc.exists){ showToast("Usuário ou senha incorretos","red"); return; }
+      username = doc.data().username;
+      role = doc.data().role;
       db.collection("users").doc(cred.user.uid).update({status:"online"});
       showToast("Login bem-sucedido! ✅","#4caf50");
       setTimeout(showChat,800);
-    });
-  }).catch(()=>showToast("Usuário ou senha incorretos","red"));
+    })
+    .catch(()=> showToast("Usuário ou senha incorretos","red"));
 });
 
 document.getElementById("logoutBtn").addEventListener("click",()=>{
