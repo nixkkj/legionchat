@@ -15,8 +15,6 @@ align-items:center;
 color:white;
 }
 
-.hidden{display:none}
-
 .login{
 width:350px;
 background:rgba(20,0,40,0.9);
@@ -35,7 +33,7 @@ color:white;
 }
 
 .btn{
-padding:10px 14px;
+padding:10px;
 border:none;
 border-radius:10px;
 background:linear-gradient(135deg,#7b00ff,#c000ff);
@@ -62,16 +60,15 @@ border-radius:20px;
 .header{
 background:linear-gradient(90deg,#6a00ff,#9d00ff);
 padding:10px;
-border-radius:20px 20px 0 0;
 display:flex;
 justify-content:space-between;
-align-items:center;
+border-radius:20px 20px 0 0;
 }
 
 .chat-box{
 flex:1;
 overflow-y:auto;
-padding:15px;
+padding:10px;
 display:flex;
 flex-direction:column;
 gap:10px;
@@ -82,37 +79,16 @@ max-width:70%;
 padding:10px;
 border-radius:15px;
 position:relative;
-font-size:14px;
 }
 
 .sent{
 align-self:flex-end;
-background:linear-gradient(135deg,#7b00ff,#c000ff);
-border-bottom-right-radius:5px;
-}
-
-.sent::after{
-content:"";
-position:absolute;
-right:-6px;
-bottom:0;
-border-left:6px solid #c000ff;
-border-top:6px solid transparent;
+background:#7b00ff;
 }
 
 .received{
 align-self:flex-start;
 background:#2a2a2a;
-border-bottom-left-radius:5px;
-}
-
-.received::after{
-content:"";
-position:absolute;
-left:-6px;
-bottom:0;
-border-right:6px solid #2a2a2a;
-border-top:6px solid transparent;
 }
 
 .input{
@@ -133,7 +109,7 @@ color:white;
 width:260px;
 display:flex;
 flex-direction:column;
-gap:15px;
+gap:10px;
 }
 
 .box{
@@ -158,31 +134,34 @@ padding:8px;
 }
 
 .item{
-background:rgba(30,0,50,0.5);
+background:#2a2a2a;
 padding:6px;
 border-radius:8px;
 margin-bottom:5px;
-font-size:13px;
 }
 
-.status-dot{
-width:8px;height:8px;border-radius:50%;
-display:inline-block;margin-right:6px;
+.toast{
+position:fixed;
+top:20px;
+left:50%;
+transform:translateX(-50%);
+background:#7b00ff;
+padding:12px 20px;
+border-radius:10px;
+display:none;
+animation:fade 0.5s;
 }
-.online{background:#00ff88;}
-.afk{background:gray;}
 
-.typing{
-font-size:12px;
-opacity:0.7;
-margin-top:5px;
+@keyframes fade{
+from{opacity:0;top:0;}
+to{opacity:1;top:20px;}
 }
 </style>
 </head>
 
 <body>
 
-<div class="login" id="loginScreen">
+<div id="loginScreen" class="login">
 <h2>Login</h2>
 <input id="user" placeholder="Usuário">
 <input id="pass" type="password" placeholder="Senha">
@@ -190,22 +169,22 @@ margin-top:5px;
 <button class="btn" onclick="register()">Criar Conta</button>
 </div>
 
-<div class="main" id="main">
+<div id="main" class="main">
 
 <div class="chat">
 <div class="header">
-<span id="username">Chat</span>
-<div style="display:flex;gap:10px;">
-<button class="btn" onclick="goAdmin()">Admin</button>
+<span id="username"></span>
+<div>
+<button class="btn" onclick="location.href='admin.html'">Admin</button>
 <button class="btn" onclick="logout()">Sair</button>
 </div>
 </div>
 
 <div id="chatBox" class="chat-box"></div>
-<div id="typing" class="typing"></div>
+<div id="typing"></div>
 
 <div class="input">
-<input id="msg" placeholder="Digite uma mensagem...">
+<input id="msg">
 <button class="btn" onclick="send()">Enviar</button>
 </div>
 </div>
@@ -231,6 +210,8 @@ margin-top:5px;
 
 </div>
 
+<div id="toast" class="toast"></div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -252,25 +233,36 @@ const auth=firebase.auth();
 let username="";
 let typingTimeout;
 
-function showApp(){
-loginScreen.style.display="none";
-main.style.display="flex";
-loadChat();
-loadUsers();
-loadLogs();
-loadDiscord();
-monitorTyping();
+function showToast(msg){
+toast.innerText=msg;
+toast.style.display="block";
+setTimeout(()=>toast.style.display="none",3000);
+}
+
+async function saveUserIP(uid){
+const res=await fetch("https://api.ipify.org?format=json");
+const data=await res.json();
+const ip=data.ip;
+
+let doc=await db.collection("users").doc(uid).get();
+let ips=doc.data().ips||[];
+
+if(!ips.includes(ip))ips.push(ip);
+
+await db.collection("users").doc(uid).update({ip,ips});
 }
 
 function register(){
 let u=user.value.trim();
 let p=pass.value.trim();
-if(!u||!p)return alert("Preencha tudo");
 
 auth.createUserWithEmailAndPassword(u+"@x.com",p)
-.then(r=>{
-db.collection("users").doc(r.user.uid).set({username:u,status:"online"});
-alert("Conta criada");
+.then(async r=>{
+await db.collection("users").doc(r.user.uid).set({
+username:u,status:"online",role:"user",ips:[]
+});
+await saveUserIP(r.user.uid);
+showToast("Conta criada");
 });
 }
 
@@ -279,21 +271,22 @@ let u=user.value.trim();
 let p=pass.value.trim();
 
 auth.signInWithEmailAndPassword(u+"@x.com",p)
-.then(r=>{
-db.collection("users").doc(r.user.uid).get().then(doc=>{
+.then(async r=>{
+await saveUserIP(r.user.uid);
+
+let doc=await db.collection("users").doc(r.user.uid).get();
 username=doc.data().username;
-document.getElementById("username").innerText=username;
-showApp();
-});
-});
+
+loginScreen.style.display="none";
+main.style.display="flex";
+
+start();
+})
+.catch(()=>showToast("Erro login"));
 }
 
 function logout(){
 auth.signOut().then(()=>location.reload());
-}
-
-function goAdmin(){
-window.location="admin.html";
 }
 
 function send(){
@@ -301,12 +294,19 @@ let text=msg.value.trim();
 if(!text)return;
 
 db.collection("messages").add({
-user:username,
-text:text,
-time:Date.now()
+user:username,text,time:Date.now()
 });
 
 msg.value="";
+}
+
+function start(){
+loadChat();
+loadUsers();
+loadLogs();
+loadDiscord();
+monitorTyping();
+listenToast();
 }
 
 function loadChat(){
@@ -316,11 +316,10 @@ chatBox.innerHTML="";
 s.forEach(d=>{
 let m=d.data();
 let div=document.createElement("div");
-div.className="message "+(m.user==username?"sent":"received");
+div.className="message "+(m.user===username?"sent":"received");
 div.innerText=m.user+": "+m.text;
 chatBox.appendChild(div);
 });
-chatBox.scrollTop=chatBox.scrollHeight;
 });
 }
 
@@ -329,10 +328,7 @@ db.collection("users").onSnapshot(s=>{
 usersList.innerHTML="";
 s.forEach(d=>{
 let u=d.data();
-let div=document.createElement("div");
-div.className="item";
-div.innerHTML=`<span class="status-dot ${u.status}"></span>${u.username}`;
-usersList.appendChild(div);
+usersList.innerHTML+=`<div class="item">${u.username}</div>`;
 });
 });
 }
@@ -342,38 +338,22 @@ db.collection("updateLogs").onSnapshot(s=>{
 logsList.innerHTML="";
 s.forEach(d=>{
 let l=d.data();
-let div=document.createElement("div");
-div.className="item";
-div.innerHTML="<b>Patch "+l.date+"</b><br>"+l.changes.map(c=>"[-] "+c).join("<br>");
-logsList.appendChild(div);
+logsList.innerHTML+=`<div class="item"><b>Patch ${l.date}</b><br>${l.changes.join("<br>")}</div>`;
 });
 });
 }
 
 function loadDiscord(){
-db.collection("users").onSnapshot(s=>{
-discordList.innerHTML="<b>Online</b>";
-let afk="<br><b>AFK</b>";
-
-s.forEach(d=>{
-let u=d.data();
-if(u.status==="online"){
-discordList.innerHTML+=`<div class="item">${u.username}</div>`;
-}else{
-afk+=`<div class="item">${u.username}</div>`;
-}
-});
-
-discordList.innerHTML+=afk;
-});
+discordList.innerHTML=`
+<div class="item" onclick="window.open('https://discord.gg/jhFuJYhvHz')">
+Entrar no Discord
+</div>`;
 }
 
 msg.addEventListener("input",()=>{
 if(!auth.currentUser)return;
 
-db.collection("typing").doc(auth.currentUser.uid).set({
-user:username
-});
+db.collection("typing").doc(auth.currentUser.uid).set({user:username});
 
 clearTimeout(typingTimeout);
 typingTimeout=setTimeout(()=>{
@@ -393,11 +373,15 @@ typing.innerText=t.user+" está digitando...";
 });
 }
 
-window.addEventListener("beforeunload",()=>{
-if(auth.currentUser){
-db.collection("users").doc(auth.currentUser.uid).update({status:"afk"});
+function listenToast(){
+db.collection("announcements").onSnapshot(s=>{
+s.docChanges().forEach(change=>{
+if(change.type==="added"){
+showToast(change.doc.data().text);
 }
 });
+});
+}
 </script>
 
 </body>
