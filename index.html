@@ -83,28 +83,43 @@ const auth=firebase.auth();
 
 let username="",role="";
 
-function showToast(msg,color="#7b00ff"){const t=document.createElement("div");t.className="toast";t.style.background=color;t.innerText=msg;document.getElementById("toastContainer").appendChild(t);setTimeout(()=>t.remove(),2500);}
+function showToast(msg,color="#7b00ff"){
+  const t=document.createElement("div");
+  t.className="toast";
+  t.style.background=color;
+  t.innerText=msg;
+  document.getElementById("toastContainer").appendChild(t);
+  setTimeout(()=>t.remove(),2500);
+}
 
-function showChat(){document.getElementById("loginScreen").classList.add("hidden");document.getElementById("chatContainer").classList.remove("hidden");document.getElementById("header").innerText="Chat - "+username;if(role==="admin")document.getElementById("adminBtn").classList.remove("hidden");startChat();monitorUsers();loadUpdateLogs();}
+function showChat(){
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("chatContainer").classList.remove("hidden");
+  document.getElementById("header").innerText="Chat - "+username;
+  if(role==="admin") document.getElementById("adminBtn").classList.remove("hidden");
+  startChat();
+  monitorUsers();
+  loadUpdateLogs();
+}
 
-document.getElementById("registerBtn").addEventListener("click", () => {
-  const u = document.getElementById("loginUser").value.trim();
-  const p = document.getElementById("loginPass").value.trim();
-  if (!u || !p) { showToast("Preencha todos os campos","red"); return; }
+document.getElementById("registerBtn").addEventListener("click",()=>{
+  const u=document.getElementById("loginUser").value.trim();
+  const p=document.getElementById("loginPass").value.trim();
+  if(!u||!p){ showToast("Preencha todos os campos","red"); return; }
   db.collection("users").where("username","==",u).get().then(snap=>{
     if(!snap.empty){ showToast("Usuário já existe","red"); return; }
     auth.createUserWithEmailAndPassword(u+"@legionchat.fake", p)
-      .then(cred => db.collection("users").doc(cred.user.uid).set({username:u, status:"online", role:"user"}))
-      .then(()=> showToast("Conta criada com sucesso! ✅","#4caf50"))
+      .then(cred => db.collection("users").doc(cred.user.uid).set({username:u,status:"online",role:"user"}))
+      .then(()=> showToast("Conta criada com sucesso ✅","#4caf50"))
       .catch(e=> showToast(e.message,"red"));
   });
 });
 
-document.getElementById("loginBtn").addEventListener("click", () => {
-  const u = document.getElementById("loginUser").value.trim();
-  const p = document.getElementById("loginPass").value.trim();
-  if(!u || !p){ showToast("Preencha todos os campos","red"); return; }
-  auth.signInWithEmailAndPassword(u+"@legionchat.fake", p)
+document.getElementById("loginBtn").addEventListener("click",()=>{
+  const u=document.getElementById("loginUser").value.trim();
+  const p=document.getElementById("loginPass").value.trim();
+  if(!u||!p){ showToast("Preencha todos os campos","red"); return; }
+  auth.signInWithEmailAndPassword(u+"@legionchat.fake",p)
     .then(cred => db.collection("users").doc(cred.user.uid).get())
     .then(doc => {
       if(!doc.exists){ showToast("Usuário ou senha incorretos","red"); return; }
@@ -114,7 +129,7 @@ document.getElementById("loginBtn").addEventListener("click", () => {
       showToast("Login bem-sucedido! ✅","#4caf50");
       setTimeout(showChat,800);
     })
-    .catch(()=> showToast("Usuário ou senha incorretos","red"));
+    .catch(()=>showToast("Usuário ou senha incorretos","red"));
 });
 
 document.getElementById("logoutBtn").addEventListener("click",()=>{
@@ -129,7 +144,7 @@ document.getElementById("msgInput").addEventListener("keypress",e=>{if(e.key==="
 
 function sendMessage(){
   const text=document.getElementById("msgInput").value.trim();
-  if(!text)return;
+  if(!text) return;
   const msgObj={user:username,data:text,timestamp:firebase.firestore.FieldValue.serverTimestamp(),displayTime:new Date().toLocaleTimeString()};
   db.collection("rooms").doc("general").collection("messages").add(msgObj);
   document.getElementById("msgInput").value="";
