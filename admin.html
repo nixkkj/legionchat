@@ -91,13 +91,18 @@ margin-bottom:10px;
 <div id="messages" class="content"></div>
 </div>
 
+  
 <div class="box">
 <div class="header">Usuários</div>
 <div id="users" class="content"></div>
 </div>
+  
 
 </div>
 
+  <input id="globalMsg" placeholder="Aviso global">
+<button onclick="sendGlobal()">Enviar Aviso</button>
+  
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -159,6 +164,14 @@ db.collection("messages").doc(id).delete();
 }
 }
 
+  function sendGlobal(){
+let text=document.getElementById("globalMsg").value;
+
+db.collection("announcements").add({
+text:text,
+time:Date.now()
+});
+}
 function loadUsers(){
 db.collection("users").onSnapshot(s=>{
 users.innerHTML="";
