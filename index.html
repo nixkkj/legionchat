@@ -30,7 +30,7 @@ body{height:100vh;background:linear-gradient(135deg,#0a0a0f,#1a0033);display:fle
 .user-item{padding:5px;border-radius:5px;margin:2px 0;background:rgba(255,255,255,0.1);display:flex;justify-content:space-between;}
 .afk{opacity:0.5;}
 .logout-btn{padding:5px 10px;border:none;border-radius:5px;background:#c00000;color:white;cursor:pointer;}
-.update-logs{width:250px;background:rgba(0,0,0,0.2);color:white;padding:10px;display:flex;flex-direction:column;}
+.update-logs{width:250px;background:rgba(0,0,0,0.2);color:white;padding:10px;display:flex;flex-direction:column;overflow-y:auto;}
 .update-logs h4{margin-bottom:10px;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 </style>
@@ -75,10 +75,19 @@ body{height:100vh;background:linear-gradient(135deg,#0a0a0f,#1a0033);display:fle
   <div class="update-logs">
     <h4>Update Logs</h4>
     <div id="updateList">
-      <p>[10:00] Sistema de login implementado ✅</p>
-      <p>[10:05] Chat ordenando mensagens corretamente ✅</p>
-      <p>[10:10] Lista de usuários online/AFK ✅</p>
-      <p>[10:15] Painel Update Logs adicionado ✅</p>
+      <div>
+        <strong>Patch 2026-03-28</strong>
+        <p>[-] Sistema de login implementado</p>
+        <p>[-] Chat ordenando mensagens corretamente</p>
+        <p>[-] Lista de usuários online/AFK</p>
+        <p>[-] Painel Update Logs adicionado</p>
+      </div>
+      <div>
+        <strong>Patch 2026-03-29</strong>
+        <p>[-] Mensagens enviadas exibindo nome do usuário</p>
+        <p>[-] Botão sair para voltar à tela de login</p>
+        <p>[-] Verificação para não enviar mensagens deslogado</p>
+      </div>
     </div>
   </div>
 </div>
@@ -96,17 +105,10 @@ const firebaseConfig = {
   appId: "1:880449921734:web:cdf622d2af44cb6ae8adc7",
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const db=firebase.firestore();
+let username="",room="general";
 
-let username = "";
-let room = "general";
-
-function showToast(msg,color="#7b00ff"){
-  const t=document.createElement("div");
-  t.className="toast"; t.style.background=color; t.innerText=msg;
-  document.getElementById("toastContainer").appendChild(t);
-  setTimeout(()=>t.remove(),2500);
-}
+function showToast(msg,color="#7b00ff"){const t=document.createElement("div");t.className="toast";t.style.background=color;t.innerText=msg;document.getElementById("toastContainer").appendChild(t);setTimeout(()=>t.remove(),2500);}
 
 const loginScreen=document.getElementById("loginScreen");
 const registerScreen=document.getElementById("registerScreen");
@@ -116,22 +118,15 @@ const chatBox=document.getElementById("chatBox");
 const msgInput=document.getElementById("msgInput");
 const userList=document.getElementById("userList");
 
-document.getElementById("showRegister").addEventListener("click",()=>{
-  loginScreen.classList.add("hidden"); registerScreen.classList.remove("hidden");
-});
-document.getElementById("showLogin").addEventListener("click",()=>{
-  registerScreen.classList.add("hidden"); loginScreen.classList.remove("hidden");
-});
-
+document.getElementById("showRegister").addEventListener("click",()=>{loginScreen.classList.add("hidden");registerScreen.classList.remove("hidden");});
+document.getElementById("showLogin").addEventListener("click",()=>{registerScreen.classList.add("hidden");loginScreen.classList.remove("hidden");});
 document.getElementById("registerBtn").addEventListener("click",()=>{
   const u=document.getElementById("regUser").value.trim();
   const p=document.getElementById("regPass").value.trim();
   if(!u||!p){showToast("Preencha todos os campos","red");return;}
   db.collection("users").where("username","==",u).get().then(snap=>{
-    if(!snap.empty){showToast("Usuário já existe","red"); return;}
-    db.collection("users").add({username:u,password:p,status:"online"})
-      .then(()=>{showToast("Registro bem-sucedido! ✅","#4caf50");setTimeout(()=>{registerScreen.classList.add("hidden"); loginScreen.classList.remove("hidden");},800);})
-      .catch(e=>showToast("Erro: "+e.message,"red"));
+    if(!snap.empty){showToast("Usuário já existe","red");return;}
+    db.collection("users").add({username:u,password:p,status:"online"}).then(()=>{showToast("Registro bem-sucedido! ✅","#4caf50");setTimeout(()=>{registerScreen.classList.add("hidden");loginScreen.classList.remove("hidden");},800);}).catch(e=>showToast("Erro: "+e.message,"red"));
   });
 });
 
@@ -144,79 +139,26 @@ function loginUser(){
   const u=document.getElementById("loginUser").value.trim();
   const p=document.getElementById("loginPass").value.trim();
   if(!u||!p){showToast("Preencha todos os campos","red");return;}
-  db.collection("users").where("username","==",u).where("password","==",p).get()
-    .then(snap=>{
-      if(snap.empty){showToast("Usuário ou senha incorretos","red");return;}
-      username=u; showToast("Login bem-sucedido! ✅","#4caf50");
-      db.collection("users").doc(snap.docs[0].id).update({status:"online"});
-      loginScreen.classList.add("hidden"); chatScreen.classList.remove("hidden");
-      header.querySelector("span").innerText="Chat - "+username;
-      startChat(); monitorUsers();
-    }).catch(e=>showToast("Erro ao logar: "+e.message,"red"));
+  db.collection("users").where("username","==",u).where("password","==",p).get().then(snap=>{
+    if(snap.empty){showToast("Usuário ou senha incorretos","red");return;}
+    username=u; showToast("Login bem-sucedido! ✅","#4caf50");
+    db.collection("users").doc(snap.docs[0].id).update({status:"online"});
+    loginScreen.classList.add("hidden"); chatScreen.classList.remove("hidden");
+    header.querySelector("span").innerText="Chat - "+username;
+    startChat(); monitorUsers();
+  }).catch(e=>showToast("Erro ao logar: "+e.message,"red"));
 }
 
-function logoutUser(){
-  if(!username) return;
-  db.collection("users").where("username","==",username).get().then(snap=>{
-    if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"offline"});
-    username="";
-    chatScreen.classList.add("hidden");
-    loginScreen.classList.remove("hidden");
-    chatBox.innerHTML="";
-    userList.innerHTML="";
-  });
-}
+function logoutUser(){if(!username) return;db.collection("users").where("username","==",username).get().then(snap=>{if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"offline"});username="";chatScreen.classList.add("hidden");loginScreen.classList.remove("hidden");chatBox.innerHTML="";userList.innerHTML="";});}
 
-function sendMessage(){
-  if(!username){showToast("Você precisa estar logado para enviar mensagens","red"); return;}
-  const text = msgInput.value.trim();
-  if(!text) return;
-  const now = new Date();
-  const displayTime = now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0");
-  db.collection("rooms").doc(room).collection("messages").add({
-    user: username,
-    data: text,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    displayTime: displayTime
-  }).then(()=>{msgInput.value="";})
-    .catch(e=>showToast("Erro: "+e.message,"red"));
-}
+function sendMessage(){if(!username){showToast("Você precisa estar logado para enviar mensagens","red");return;}const text=msgInput.value.trim();if(!text) return;const now=new Date();const displayTime=now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0");db.collection("rooms").doc(room).collection("messages").add({user:username,data:text,timestamp:firebase.firestore.FieldValue.serverTimestamp(),displayTime:displayTime}).then(()=>{msgInput.value="";}).catch(e=>showToast("Erro: "+e.message,"red"));}
 
-function startChat(){
-  db.collection("rooms").doc(room).collection("messages")
-    .orderBy("timestamp")
-    .onSnapshot(snapshot=>{
-      chatBox.innerHTML="";
-      snapshot.docs.forEach(doc=>{
-        const msg=doc.data();
-        const div=document.createElement("div");
-        div.className="message "+(msg.user===username?"sent":"received");
-        div.innerText=`[${msg.displayTime}] ${msg.user}: ${msg.data}`;
-        chatBox.appendChild(div);
-      });
-      chatBox.scrollTop = chatBox.scrollHeight;
-    });
-}
+function startChat(){db.collection("rooms").doc(room).collection("messages").orderBy("timestamp").onSnapshot(snapshot=>{chatBox.innerHTML="";snapshot.docs.forEach(doc=>{const msg=doc.data();const div=document.createElement("div");div.className="message "+(msg.user===username?"sent":"received");div.innerText=`[${msg.displayTime}] ${msg.user}: ${msg.data}`;chatBox.appendChild(div);});chatBox.scrollTop=chatBox.scrollHeight;});}
 
-function monitorUsers(){
-  db.collection("users").onSnapshot(snapshot=>{
-    userList.innerHTML="";
-    snapshot.docs.forEach(doc=>{
-      const user=doc.data();
-      const div=document.createElement("div");
-      div.className="user-item"+(user.status==="afk"?" afk":"");
-      div.innerText=user.username;
-      const status=document.createElement("span"); 
-      status.innerText=user.status==="afk"?"AFK":user.status==="offline"?"Offline":"Online";
-      div.appendChild(status);
-      userList.appendChild(div);
-    });
-  });
-}
+function monitorUsers(){db.collection("users").onSnapshot(snapshot=>{userList.innerHTML="";snapshot.docs.forEach(doc=>{const user=doc.data();const div=document.createElement("div");div.className="user-item"+(user.status==="afk"?" afk":"");div.innerText=user.username;const status=document.createElement("span");status.innerText=user.status==="afk"?"AFK":user.status==="offline"?"Offline":"Online";div.appendChild(status);userList.appendChild(div);});});}
 
-function setAFK(){if(!username) return; db.collection("users").where("username","==",username).get().then(snap=>{if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"afk"});});}
-function setOnline(){if(!username) return; db.collection("users").where("username","==",username).get().then(snap=>{if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"online"});});}
-
+function setAFK(){if(!username) return;db.collection("users").where("username","==",username).get().then(snap=>{if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"afk"});});}
+function setOnline(){if(!username) return;db.collection("users").where("username","==",username).get().then(snap=>{if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"online"});});}
 window.addEventListener("blur",()=>{setAFK();});
 window.addEventListener("focus",()=>{setOnline();});
 </script>
