@@ -13,27 +13,26 @@ body{background:linear-gradient(135deg,#0a0a0f,#1a0033);color:white;height:100vh
 .login-screen input{width:100%;padding:12px;margin:10px 0;border-radius:12px;border:none;background:#1f1f2e;color:white;font-size:14px;}
 .login-screen button{width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;margin-top:10px;font-weight:bold;cursor:pointer;transition:0.3s;}
 .login-screen button:hover{opacity:0.85;}
-.chat-container{width:95%;max-width:1000px;height:90vh;background:rgba(20,0,40,0.85);border-radius:20px;display:flex;flex-direction:column;backdrop-filter:blur(12px);box-shadow:0 0 50px rgba(140,0,255,0.5);}
-.chat-header{padding:15px;text-align:center;color:#fff;background:linear-gradient(90deg,#6a00ff,#9d00ff);display:flex;justify-content:space-between;align-items:center;border-radius:20px 20px 0 0;}
-.chat-main{display:flex;flex:1;overflow:hidden;}
-.chat-box{flex:3;padding:20px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;}
-.chat-box::-webkit-scrollbar{width:8px;}
-.chat-box::-webkit-scrollbar-thumb{background:linear-gradient(#7b00ff,#c000ff);border-radius:10px;}
+.layout-container{width:95%;max-width:1000px;display:flex;gap:20px;}
+.box{flex:1;background:rgba(20,0,40,0.85);border-radius:20px;display:flex;flex-direction:column;backdrop-filter:blur(12px);box-shadow:0 0 50px rgba(140,0,255,0.2);}
+.box-header{background:linear-gradient(90deg,#6a00ff,#9d00ff);padding:12px 15px;border-radius:20px 20px 0 0;font-weight:bold;text-align:center;}
+.chat-box,.users-list,.logs-list{flex:1;padding:15px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;}
+.chat-box::-webkit-scrollbar,.users-list::-webkit-scrollbar,.logs-list::-webkit-scrollbar{width:8px;}
+.chat-box::-webkit-scrollbar-thumb,.users-list::-webkit-scrollbar-thumb,.logs-list::-webkit-scrollbar-thumb{background:linear-gradient(#7b00ff,#c000ff);border-radius:10px;}
 .message{max-width:70%;padding:10px 14px;border-radius:15px;color:white;font-size:14px;animation:fadeIn 0.2s ease;word-wrap:break-word;}
 .received{background:#2a2a2a;align-self:flex-start;border-radius:15px 15px 15px 5px;}
 .sent{background:linear-gradient(135deg,#7b00ff,#c000ff);align-self:flex-end;border-radius:15px 15px 5px 15px;}
-.chat-input{display:flex;padding:15px;background:rgba(10,0,20,0.95);}
+.chat-input{display:flex;padding:10px;background:rgba(10,0,20,0.95);}
 .chat-input input{flex:1;padding:12px;border-radius:12px;border:none;background:#1f1f2e;color:white;font-size:14px;}
 .chat-input button{margin-left:10px;padding:12px 20px;border:none;border-radius:12px;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;font-weight:bold;cursor:pointer;transition:0.3s;}
 .chat-input button:hover{opacity:0.85;}
-.users-panel,.update-logs{width:250px;padding:15px;background:rgba(20,0,40,0.75);border-radius:15px;overflow-y:auto;}
-.users-panel h4,.update-logs h4{text-align:center;margin-bottom:10px;}
-.user-item{margin:5px 0;}
-.update-logs div{margin-bottom:10px;}
+.user-item{margin:5px 0;padding:6px 10px;background:rgba(30,0,50,0.5);border-radius:10px;}
+.log-item{margin:5px 0;padding:6px 10px;background:rgba(30,0,50,0.5);border-radius:10px;font-size:13px;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 </style>
 </head>
 <body>
+
 <div id="toastContainer"></div>
 
 <div class="login-screen" id="loginScreen">
@@ -44,31 +43,27 @@ body{background:linear-gradient(135deg,#0a0a0f,#1a0033);color:white;height:100vh
 <button id="registerBtn">Criar Conta</button>
 </div>
 
-<div class="chat-container hidden" id="chatContainer">
-<div class="chat-header">
-<span id="header">Chat</span>
-<div style="display:flex;gap:10px;">
-<button id="adminBtn" class="hidden">Painel Admin</button>
-<button id="logoutBtn">Sair</button>
-</div>
-</div>
+<div class="layout-container hidden" id="mainLayout">
 
-<div class="chat-main">
+<div class="box" id="chatBoxContainer">
+<div class="box-header">Chat</div>
 <div class="chat-box" id="chatBox"></div>
-<div class="users-panel" id="usersPanel">
-<h4>Usuários</h4>
-<div id="usersList"></div>
-</div>
-<div class="update-logs" id="updateLogs">
-<h4>Update Logs</h4>
-<div id="logsList"></div>
-</div>
-</div>
-
 <div class="chat-input">
 <input type="text" id="msgInput" placeholder="Digite uma mensagem...">
 <button id="sendBtn">Enviar</button>
 </div>
+</div>
+
+<div class="box" id="usersContainer">
+<div class="box-header">Usuários</div>
+<div class="users-list" id="usersList"></div>
+</div>
+
+<div class="box" id="logsContainer">
+<div class="box-header">Update Logs</div>
+<div class="logs-list" id="logsList"></div>
+</div>
+
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -87,7 +82,7 @@ firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore(),auth=firebase.auth();
 let username="",role="";
 function showToast(msg,color="#7b00ff"){const t=document.createElement("div");t.className="toast";t.style.background=color;t.innerText=msg;document.getElementById("toastContainer").appendChild(t);setTimeout(()=>t.remove(),2500);}
-function showChat(){document.getElementById("loginScreen").classList.add("hidden");document.getElementById("chatContainer").classList.remove("hidden");document.getElementById("header").innerText="Chat - "+username;if(role==="admin")document.getElementById("adminBtn").classList.remove("hidden");startChat();monitorUsers();loadUpdateLogs();}
+function showMainLayout(){document.getElementById("loginScreen").classList.add("hidden");document.getElementById("mainLayout").classList.remove("hidden");startChat();monitorUsers();loadUpdateLogs();}
 document.getElementById("registerBtn").addEventListener("click",()=>{
 const u=document.getElementById("loginUser").value.trim();
 const p=document.getElementById("loginPass").value.trim();
@@ -105,17 +100,15 @@ if(!u||!p){showToast("Preencha todos os campos","red");return;}
 const emailFake=u+"@test.com";
 auth.signInWithEmailAndPassword(emailFake,p)
 .then(cred=>db.collection("users").doc(cred.user.uid).get()
-.then(doc=>{if(!doc.exists){showToast("Usuário ou senha incorretos","red");return;}username=doc.data().username;role=doc.data().role;db.collection("users").doc(cred.user.uid).update({status:"online"});showToast("Login bem-sucedido! ✅","#4caf50");setTimeout(showChat,800);})).catch(()=>showToast("Usuário ou senha incorretos","red"));
+.then(doc=>{if(!doc.exists){showToast("Usuário ou senha incorretos","red");return;}username=doc.data().username;role=doc.data().role;db.collection("users").doc(cred.user.uid).update({status:"online"});showToast("Login bem-sucedido! ✅","#4caf50");setTimeout(showMainLayout,800);})).catch(()=>showToast("Usuário ou senha incorretos","red"));
 });
-document.getElementById("logoutBtn").addEventListener("click",()=>{auth.signOut().then(()=>{window.location.reload();});});
-document.getElementById("adminBtn").addEventListener("click",()=>{window.location.href="admin.html";});
-const chatBox=document.getElementById("chatBox");
 document.getElementById("sendBtn").addEventListener("click",sendMessage);
 document.getElementById("msgInput").addEventListener("keypress",e=>{if(e.key==="Enter")sendMessage();});
 function sendMessage(){const text=document.getElementById("msgInput").value.trim();if(!text)return;const msgObj={user:username,data:text,timestamp:firebase.firestore.FieldValue.serverTimestamp(),displayTime:new Date().toLocaleTimeString()};db.collection("rooms").doc("general").collection("messages").add(msgObj);document.getElementById("msgInput").value="";}
-function startChat(){db.collection("rooms").doc("general").collection("messages").orderBy("timestamp").onSnapshot(snapshot=>{chatBox.innerHTML="";snapshot.docs.forEach(doc=>{const msg=doc.data();const div=document.createElement("div");div.className="message "+(msg.user===username?"sent":"received");div.innerText=`[${msg.displayTime||""}] ${msg.user}: ${msg.data}`;chatBox.appendChild(div);chatBox.scrollTop=chatBox.scrollHeight;});});}
+function startChat(){const chatBox=document.getElementById("chatBox");db.collection("rooms").doc("general").collection("messages").orderBy("timestamp").onSnapshot(snapshot=>{chatBox.innerHTML="";snapshot.docs.forEach(doc=>{const msg=doc.data();const div=document.createElement("div");div.className="message "+(msg.user===username?"sent":"received");div.innerText=`[${msg.displayTime||""}] ${msg.user}: ${msg.data}`;chatBox.appendChild(div);chatBox.scrollTop=chatBox.scrollHeight;});});}
 function monitorUsers(){const usersList=document.getElementById("usersList");db.collection("users").onSnapshot(snapshot=>{usersList.innerHTML="";snapshot.docs.forEach(doc=>{const u=doc.data();const div=document.createElement("div");div.className="user-item";div.innerText=u.username+" - "+u.status;usersList.appendChild(div);});});window.addEventListener("beforeunload",()=>{if(auth.currentUser)db.collection("users").doc(auth.currentUser.uid).update({status:"afk"});});}
-function loadUpdateLogs(){const logsList=document.getElementById("logsList");db.collection("updateLogs").orderBy("timestamp","desc").onSnapshot(snapshot=>{logsList.innerHTML="";snapshot.docs.forEach(doc=>{const log=doc.data();const div=document.createElement("div");div.innerHTML=`<strong>Patch ${log.date}</strong><br>${log.changes.map(c=>`[-] ${c}`).join("<br>")}`;logsList.appendChild(div);});});}
+function loadUpdateLogs(){const logsList=document.getElementById("logsList");db.collection("updateLogs").orderBy("timestamp","desc").onSnapshot(snapshot=>{logsList.innerHTML="";snapshot.docs.forEach(doc=>{const log=doc.data();const div=document.createElement("div");div.className="log-item";div.innerHTML=`<strong>Patch ${log.date}</strong><br>${log.changes.map(c=>`[-] ${c}`).join("<br>")}`;logsList.appendChild(div);});});}
 </script>
+
 </body>
 </html>
