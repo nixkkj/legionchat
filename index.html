@@ -5,14 +5,24 @@
 <title>Legion Chat</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
-body{height:100vh;display:flex;background:#0a0a0f;color:white}
+body{height:100vh;display:flex;background:#0a0a0f;color:white;overflow:hidden}
 .hidden{display:none}
-.login-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,0,20,0.95);display:flex;justify-content:center;align-items:center;flex-direction:column;gap:10px;z-index:10}
-.login-screen input{padding:10px;border-radius:10px;border:none;width:250px;background:#1f1f2e;color:white}
-.login-screen button{padding:10px 20px;border:none;border-radius:10px;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;cursor:pointer}
-.login-screen h2{margin-bottom:10px;text-align:center}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:white;padding:15px 25px;border-radius:8px;opacity:0;pointer-events:none;transition:0.5s;font-weight:500;z-index:9999}
+.toast.show{opacity:1;pointer-events:auto;animation:slideDown 0.5s ease forwards,fadeOut 0.5s 2.5s forwards}
+@keyframes slideDown{0%{transform:translate(-50%,-50px)}100%{transform:translate(-50%,0)}}
+@keyframes fadeOut{to{opacity:0}}
+
+.login-screen{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;justify-content:center;align-items:center;background:linear-gradient(135deg,#0a0a0f,#1a0033);z-index:10}
+.login-box{background:rgba(20,0,40,0.95);backdrop-filter:blur(10px);padding:40px 30px;border-radius:15px;box-shadow:0 10px 40px rgba(0,0,0,0.5);text-align:center;min-width:300px}
+.login-box h2{margin-bottom:20px;color:#fff;font-weight:500}
+.login-box input{width:100%;padding:12px;border-radius:8px;border:none;margin:8px 0;background:#1f1f2e;color:white;font-size:14px}
+.login-box button{width:100%;padding:12px;margin:10px 0;border:none;border-radius:8px;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;font-size:14px;cursor:pointer;transition:0.3s}
+.login-box button:hover{opacity:0.9;transform:translateY(-2px)}
+.login-box .link{color:#7b00ff;cursor:pointer;text-decoration:underline}
+
 .side-panel{width:250px;background:rgba(20,0,40,0.9);backdrop-filter:blur(10px);padding:20px;display:flex;flex-direction:column;gap:10px;overflow:auto;position:fixed;left:0;top:0;height:100%;z-index:1}
 .side-panel input,.side-panel button{width:100%;height:30px;cursor:pointer;margin-bottom:5px}
+
 .chat-wrapper{flex:1;display:flex;flex-direction:column;margin-left:270px;margin-right:220px}
 .chat-container{flex:1;background:rgba(20,0,40,0.85);border-radius:20px;backdrop-filter:blur(12px);display:flex;flex-direction:column;overflow:hidden;margin-bottom:10px}
 .chat-header{padding:15px;text-align:center;background:linear-gradient(90deg,#6a00ff,#9d00ff)}
@@ -22,9 +32,11 @@ body{height:100vh;display:flex;background:#0a0a0f;color:white}
 .sent{align-self:flex-end}
 .received{align-self:flex-start}
 .typing-indicator{font-size:12px;color:#ccc;margin:5px 15px}
+
 .chat-input{display:flex;flex-direction:column;background:rgba(10,0,20,0.9);padding:10px}
 .chat-input input{flex:1;padding:10px;border-radius:10px;border:none;background:#1f1f2e;color:white;margin-top:5px}
 .chat-input button{margin-left:10px;padding:10px 20px;border:none;border-radius:10px;background:linear-gradient(135deg,#7b00ff,#c000ff);color:white;cursor:pointer}
+
 .users-panel{position:fixed;right:0;top:0;width:200px;height:100%;background:rgba(20,0,40,0.9);backdrop-filter:blur(10px);padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
 .users-panel h3{text-align:center;margin-bottom:10px}
 .user-item{padding:5px 10px;background:rgba(0,0,0,0.3);border-radius:10px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
@@ -33,21 +45,24 @@ body{height:100vh;display:flex;background:#0a0a0f;color:white}
 </head>
 <body>
 
+<div class="toast" id="toast"></div>
+
 <div class="login-screen" id="loginScreen">
-<h2>Legion Chat</h2>
-<div id="loginDiv">
-<input type="text" id="loginUser" placeholder="Usuário">
-<input type="password" id="loginPass" placeholder="Senha">
-<button id="loginBtn">Login</button>
-<button id="showRegisterBtn">Criar Conta</button>
-</div>
-<div id="registerDiv" class="hidden">
-<input type="text" id="regUser" placeholder="Usuário">
-<input type="password" id="regPass" placeholder="Senha">
-<button id="registerBtn">Registrar</button>
-<button id="backToLoginBtn">Voltar ao Login</button>
-</div>
-<div id="authMsg" style="font-size:12px;color:red;text-align:center"></div>
+  <div class="login-box">
+    <h2>Legion Chat</h2>
+    <div id="loginDiv">
+      <input type="text" id="loginUser" placeholder="Usuário">
+      <input type="password" id="loginPass" placeholder="Senha">
+      <button id="loginBtn">Login</button>
+      <p>Não tem conta? <span id="showRegisterBtn" class="link">Criar Conta</span></p>
+    </div>
+    <div id="registerDiv" class="hidden">
+      <input type="text" id="regUser" placeholder="Usuário">
+      <input type="password" id="regPass" placeholder="Senha">
+      <button id="registerBtn">Registrar</button>
+      <p>Já tem conta? <span id="backToLoginBtn" class="link">Voltar ao Login</span></p>
+    </div>
+  </div>
 </div>
 
 <div class="side-panel hidden" id="sidePanel">
@@ -56,9 +71,9 @@ body{height:100vh;display:flex;background:#0a0a0f;color:white}
 <label>Recebidas</label><input type="color" id="receivedColor" value="#2a2a2a">
 <label>Fundo</label><input type="color" id="bgColor" value="#0a0a0f">
 <h3>💬 Salas</h3>
-<button id="generalRoomBtn">Entrar no Chat Geral</button>
+<button id="generalRoomBtn">Chat Geral</button>
 <input type="text" id="roomInput" placeholder="Sala privada">
-<button id="joinRoomBtn">Entrar na Sala Privada</button>
+<button id="joinRoomBtn">Entrar</button>
 </div>
 
 <div class="chat-wrapper hidden" id="chatWrapper">
@@ -97,7 +112,6 @@ let username="",room="";
 const loginScreen=document.getElementById("loginScreen"),
 loginDiv=document.getElementById("loginDiv"),
 registerDiv=document.getElementById("registerDiv"),
-authMsg=document.getElementById("authMsg"),
 sidePanel=document.getElementById("sidePanel"),
 chatWrapper=document.getElementById("chatWrapper"),
 usersPanel=document.getElementById("usersPanel"),
@@ -108,84 +122,79 @@ typingIndicatorDiv=document.getElementById("typingIndicator"),
 onlineUsersDiv=document.getElementById("onlineUsers"),
 sentColor=document.getElementById("sentColor"),
 receivedColor=document.getElementById("receivedColor"),
-bgColor=document.getElementById("bgColor");
+bgColor=document.getElementById("bgColor"),
+toast=document.getElementById("toast");
+
+function showToast(msg,bg="#333"){toast.innerText=msg;toast.style.background=bg;toast.classList.add("show");setTimeout(()=>{toast.classList.remove("show")},3000)}
 
 bgColor.addEventListener("input",()=>document.body.style.background=bgColor.value);
 sentColor.addEventListener("input",()=>document.querySelectorAll(".sent").forEach(m=>m.style.background=sentColor.value));
 receivedColor.addEventListener("input",()=>document.querySelectorAll(".received").forEach(m=>m.style.background=receivedColor.value));
 
-document.getElementById("showRegisterBtn").addEventListener("click",()=>{
-    loginDiv.classList.add("hidden"); registerDiv.classList.remove("hidden"); authMsg.innerText="";
-});
-document.getElementById("backToLoginBtn").addEventListener("click",()=>{
-    registerDiv.classList.add("hidden"); loginDiv.classList.remove("hidden"); authMsg.innerText="";
-});
+document.getElementById("showRegisterBtn").addEventListener("click",()=>{loginDiv.classList.add("hidden");registerDiv.classList.remove("hidden")});
+document.getElementById("backToLoginBtn").addEventListener("click",()=>{registerDiv.classList.add("hidden");loginDiv.classList.remove("hidden")});
 
 // Registrar
 document.getElementById("registerBtn").addEventListener("click",()=>{
-    const u=document.getElementById("regUser").value.trim();
-    const p=document.getElementById("regPass").value.trim();
-    if(!u||!p){authMsg.style.color="red"; authMsg.innerText="Preencha todos os campos"; return;}
-    db.collection("users").where("username","==",u).get().then(snap=>{
-        if(!snap.empty){authMsg.style.color="red"; authMsg.innerText="Usuário já existe"; return;}
-        db.collection("users").add({username:u,password:p,status:"online"}).then(()=>{
-            authMsg.style.color="green"; authMsg.innerText="✅ Registrado! Volte ao login"; 
-            registerDiv.classList.add("hidden"); loginDiv.classList.remove("hidden");
-        }).catch(e=>{authMsg.style.color="red"; authMsg.innerText="Erro: "+e.message});
-    });
+  const u=document.getElementById("regUser").value.trim();
+  const p=document.getElementById("regPass").value.trim();
+  if(!u||!p){showToast("Preencha todos os campos","red"); return;}
+  db.collection("users").where("username","==",u).get().then(snap=>{
+    if(!snap.empty){showToast("Usuário já existe","red"); return;}
+    db.collection("users").add({username:u,password:p,status:"online"}).then(()=>{
+      showToast("Conta criada com sucesso! ✅","#4caf50");
+      setTimeout(()=>{registerDiv.classList.add("hidden");loginDiv.classList.remove("hidden")},1500);
+    }).catch(e=>showToast("Erro: "+e.message,"red"));
+  });
 });
 
 // Login
 document.getElementById("loginBtn").addEventListener("click",()=>{
-    const u=document.getElementById("loginUser").value.trim();
-    const p=document.getElementById("loginPass").value.trim();
-    if(!u||!p){authMsg.style.color="red"; authMsg.innerText="Preencha todos os campos"; return;}
-    db.collection("users").where("username","==",u).where("password","==",p).get().then(snap=>{
-        if(snap.empty){authMsg.style.color="red"; authMsg.innerText="Usuário ou senha incorretos"; return;}
-        username=u;
-        authMsg.style.color="green"; authMsg.innerText="✅ Login bem-sucedido!";
-        db.collection("users").doc(snap.docs[0].id).update({status:"online"});
-        setTimeout(()=>{
-            loginScreen.classList.add("hidden"); 
-            sidePanel.classList.remove("hidden"); 
-            chatWrapper.classList.remove("hidden"); 
-            usersPanel.classList.remove("hidden");
-            header.innerText="Chat - "+username;
-            startChat();
-            monitorUsers();
-        },500);
-    });
+  const u=document.getElementById("loginUser").value.trim();
+  const p=document.getElementById("loginPass").value.trim();
+  if(!u||!p){showToast("Preencha todos os campos","red"); return;}
+  db.collection("users").where("username","==",u).where("password","==",p).get().then(snap=>{
+    if(snap.empty){showToast("Usuário ou senha incorretos","red"); return;}
+    username=u; showToast("Login bem-sucedido! ✅","#4caf50");
+    db.collection("users").doc(snap.docs[0].id).update({status:"online"});
+    setTimeout(()=>{
+      loginScreen.classList.add("hidden");
+      sidePanel.classList.remove("hidden"); 
+      chatWrapper.classList.remove("hidden"); 
+      usersPanel.classList.remove("hidden");
+      header.innerText="Chat - "+username;
+      startChat();
+      monitorUsers();
+    },800);
+  });
 });
 
-// Chat
 function formatTime(ts){const d=new Date(ts);return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0")}
 function addMessage(text,type,time,color){const msg=document.createElement("div");msg.classList.add("message",type);msg.style.background=type==="sent"?sentColor.value:color||receivedColor.value;msg.innerHTML=text+`<span class="time">${time}</span>`;chatBox.appendChild(msg);chatBox.scrollTop=chatBox.scrollHeight;}
 function startChat(){if(!room) room="general";db.collection("rooms").doc(room).collection("messages").orderBy("time").onSnapshot(snapshot=>{chatBox.innerHTML="";snapshot.docs.forEach(doc=>{const m=doc.data();addMessage(m.user+": "+m.text,m.user===username?"sent":"received",formatTime(m.time||Date.now()),null);});});}
 document.getElementById("generalRoomBtn").addEventListener("click",()=>{room="general";startChat()});
-document.getElementById("joinRoomBtn").addEventListener("click",()=>{room=document.getElementById("roomInput").value.trim(); if(!room){alert("Digite o nome da sala"); return;} startChat();});
-function sendMessage(){const text=inputField.value.trim(); if(!text||!room) return;db.collection("rooms").doc(room).collection("messages").add({user:username,text,time:Date.now()}); inputField.value="";}
+document.getElementById("joinRoomBtn").addEventListener("click",()=>{room=document.getElementById("roomInput").value.trim();if(!room){showToast("Digite o nome da sala","red");return;}startChat();});
+function sendMessage(){const text=inputField.value.trim();if(!text||!room) return;db.collection("rooms").doc(room).collection("messages").add({user:username,text,time:Date.now()});inputField.value="";}
 inputField.addEventListener("keypress",e=>{if(e.key==="Enter")sendMessage()});
 
-// Lista de usuários
 function monitorUsers(){
-    db.collection("users").onSnapshot(snapshot=>{
-        onlineUsersDiv.innerHTML="";
-        snapshot.docs.forEach(doc=>{
-            const u=doc.data();
-            const item=document.createElement("div"); item.classList.add("user-item");
-            item.innerHTML=`<span>${u.username}</span><span class="user-status">${u.status||"offline"}</span>`;
-            onlineUsersDiv.appendChild(item);
-        });
+  db.collection("users").onSnapshot(snapshot=>{
+    onlineUsersDiv.innerHTML="";
+    snapshot.docs.forEach(doc=>{
+      const u=doc.data();
+      const item=document.createElement("div"); item.classList.add("user-item");
+      item.innerHTML=`<span>${u.username}</span><span class="user-status">${u.status||"offline"}</span>`;
+      onlineUsersDiv.appendChild(item);
     });
+  });
 }
 
-// Atualiza status AFK ao sair da aba
 window.addEventListener("beforeunload",()=>{
-    if(username){
-        db.collection("users").where("username","==",username).get().then(snap=>{
-            if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"offline"});
-        });
-    }
+  if(username){
+    db.collection("users").where("username","==",username).get().then(snap=>{
+      if(!snap.empty) db.collection("users").doc(snap.docs[0].id).update({status:"offline"});
+    });
+  }
 });
 </script>
 </body>
